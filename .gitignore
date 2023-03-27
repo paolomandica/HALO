@@ -123,3 +123,5 @@ mmseg/.mim
 wandb
 !.vscode/launch.json
 artifacts
+datasets/cityscapes
+results

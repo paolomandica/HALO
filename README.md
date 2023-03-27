@@ -24,14 +24,6 @@ We propose a simple region-based active learning approach for semantic segmentat
 Our algorithm, RIPU, introduces a new acquisition strategy characterizing the spatial adjacency of image regions along with the prediction confidence. 
 The proposed region-based selection strategy makes more efficient use of a limited budget than image-based or point-based counterparts. 
 
-![image](resources/framework.png)
-
-We show some qualitative examples from the Cityscapes validation set, 
-![image](resources/visualization_results.png)
-
-and also visualize the queried regions to annotate.
-![image](resources/visualization_active.png)
-
 For more information on RIPU, please check our **[Paper](https://arxiv.org/pdf/2111.12940.pdf)**.
 
 ## Usage
