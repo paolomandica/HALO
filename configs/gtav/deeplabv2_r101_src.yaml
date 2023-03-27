@@ -13,3 +13,9 @@ SOLVER:
   MAX_ITER: 31250
   STOP_ITER: 20000
   BATCH_SIZE: 2
+WANDB:
+  ENABLE: True
+  PROJECT: 'active_domain_adapt'
+  NAME: 'test_run'
+  GROUP: 'deeplabv2_r101_source'
+  ENTITY: 'pinlab-sapienza'
