@@ -183,8 +183,8 @@ class ASPP_Classifier_V2_Hyper(nn.Module):
 
         # hyperbolic classification
         # out = self.conv_reduce(x)
-        out = self.mapper.expmap2(embed)
-        out = self.conv_seg(out.double()).float()
+        embed = self.mapper.expmap2(embed)
+        out = self.conv_seg(embed.double()).float()
 
         if size is not None:
             out = F.interpolate(out, size=size, mode='bilinear', align_corners=True)
