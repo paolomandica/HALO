@@ -144,9 +144,11 @@ def test(cfg):
     accuracy_class = intersection_meter.sum / (target_meter.sum + 1e-10)
     mIoU = np.mean(iou_class)
     mAcc = np.mean(accuracy_class)
-    allAcc = sum(intersection_meter.sum) / (sum(target_meter.sum) + 1e-10)
+    aAcc = sum(intersection_meter.sum) / (sum(target_meter.sum) + 1e-10)
 
-    logger.info('Val result: mIoU/mAcc/allAcc {:.4f}/{:.4f}/{:.4f}.'.format(mIoU, mAcc, allAcc))
+    logger.info('mIoU: {:.4f}'.format(mIoU))
+    logger.info('mAcc: {:.4f}'.format(mAcc))
+    logger.info('aAcc: {:.4f}'.format(aAcc))
     for i in range(cfg.MODEL.NUM_CLASSES):
         logger.info(
             '{} {} iou/accuracy: {:.4f}/{:.4f}.'.format(i, test_data.trainid2name[i], iou_class[i], accuracy_class[i]))

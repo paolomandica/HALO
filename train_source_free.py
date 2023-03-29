@@ -10,6 +10,7 @@ import torch.nn as nn
 import torch.utils
 import torch.distributed
 from torch.utils.data import DataLoader
+from geoopt.optim import RiemannianSGD
 
 from core.configs import cfg
 from core.datasets import build_dataset
@@ -42,12 +43,17 @@ def train(cfg):
     print(classifier)
 
     # init optimizer
-    optimizer_fea = torch.optim.SGD(feature_extractor.parameters(), lr=cfg.SOLVER.BASE_LR, momentum=cfg.SOLVER.MOMENTUM,
-                                    weight_decay=cfg.SOLVER.WEIGHT_DECAY)
+    if cfg.MODEL.HYPER:
+        optim = RiemannianSGD
+    else:
+        optim = torch.optim.SGD
+
+    optimizer_fea = optim(feature_extractor.parameters(), lr=cfg.SOLVER.BASE_LR, momentum=cfg.SOLVER.MOMENTUM,
+                          weight_decay=cfg.SOLVER.WEIGHT_DECAY)
     optimizer_fea.zero_grad()
 
-    optimizer_cls = torch.optim.SGD(classifier.parameters(), lr=cfg.SOLVER.BASE_LR * 10, momentum=cfg.SOLVER.MOMENTUM,
-                                    weight_decay=cfg.SOLVER.WEIGHT_DECAY)
+    optimizer_cls = optim(classifier.parameters(), lr=cfg.SOLVER.BASE_LR * 10, momentum=cfg.SOLVER.MOMENTUM,
+                          weight_decay=cfg.SOLVER.WEIGHT_DECAY)
     optimizer_cls.zero_grad()
 
     # load checkpoint
