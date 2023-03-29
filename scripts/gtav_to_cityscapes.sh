@@ -8,5 +8,6 @@ python train.py -cfg configs/gtav/deeplabv2_r101_RA.yaml OUTPUT_DIR results/v2_g
 python train.py -cfg configs/gtav/deeplabv2_r101_PA.yaml OUTPUT_DIR results/v2_gtav_pa_40_pixel
 
 # [source-free scenario] GTAV -> Cityscapes ra, deeplabv2, 2.2%
-python train_source.py -cfg configs/gtav/deeplabv2_r101_src.yaml OUTPUT_DIR results/source_free/gtav
+CUDA_VISIBLE_DEVICES=0 python train_source.py -cfg configs/gtav/deeplabv2_r101_src.yaml OUTPUT_DIR results/pretrain_gtav
+CUDA_VISIBLE_DEVICES=1 python train_source.py -cfg configs/gtav/deeplabv2_r101_src_hyper.yaml OUTPUT_DIR results/pretrain_gtav_hyper
 python train_source_free.py -cfg configs/gtav/deeplabv2_r101_RA_source_free.yaml OUTPUT_DIR results/v2_gtav_ra_2.2_precent_source_free resume results/source_free/gtav_source_only_iter020000.pth

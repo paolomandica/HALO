@@ -12,8 +12,10 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
-                "-cfg", "configs/gtav/deeplabv2_r101_src_hyper.yaml",
-                "OUTPUT_DIR", "results/pretrain_deeplabv2_r101_gtav"
+                "-cfg",
+                "configs/gtav/deeplabv2_r101_src.yaml",
+                "OUTPUT_DIR",
+                "results/pretrain_gtav"
             ]
         }
     ]

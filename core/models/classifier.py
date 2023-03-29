@@ -148,11 +148,6 @@ class DepthwiseSeparableASPP(nn.Module):
                 m.bias.data.zero_()
 
 
-
-
-
-
-
 ########### Hyper Version of the Euclidean Heads ############
 
 class ASPP_Classifier_V2_Hyper(nn.Module):
@@ -163,7 +158,7 @@ class ASPP_Classifier_V2_Hyper(nn.Module):
             self.conv2d_list.append(
                 nn.Conv2d(
                     in_channels,
-                    num_classes,
+                    reduced_channels,
                     kernel_size=3,
                     stride=1,
                     padding=padding,
@@ -175,28 +170,26 @@ class ASPP_Classifier_V2_Hyper(nn.Module):
         for m in self.conv2d_list:
             m.weight.data.normal_(0, 0.01)
 
-        decoder_out_channels = 512    # TODO: check the correct value for this in the Euclidean version
-        self.conv_reduce = nn.Conv2d(decoder_out_channels, reduced_channels, kernel_size=1)   # to reduce channels and work in low dimensions
+        # self.conv_reduce = nn.Conv2d(in_channels, reduced_channels, kernel_size=1)
         self.mapper = HyperMapper()
         self.conv_seg = HyperMLR(reduced_channels, num_classes)
 
     def forward(self, x, size=None):
         x = x['out']
-        out = self.conv2d_list[0](x)
-        for i in range(len(self.conv2d_list) - 1):
-            out += self.conv2d_list[i + 1](x)
 
-        # hyperbolic layer
-        decoder_out = self.conv_reduce(out)
-        decoder_out = self.mapper(decoder_out)
-        out = self.conv_seg(out)
-        
+        embed = self.conv2d_list[0](x)
+        for i in range(len(self.conv2d_list) - 1):
+            embed += self.conv2d_list[i + 1](x)
+
+        # hyperbolic classification
+        # out = self.conv_reduce(x)
+        out = self.mapper.expmap2(embed)
+        out = self.conv_seg(out.double()).float()
+
         if size is not None:
             out = F.interpolate(out, size=size, mode='bilinear', align_corners=True)
-        return out, decoder_out
-    
 
-
+        return out, embed
 
 
 class DepthwiseSeparableASPP_Hyper(nn.Module):
@@ -246,14 +239,13 @@ class DepthwiseSeparableASPP_Hyper(nn.Module):
             DepthwiseSeparableConv2d(decoder_out_channels, decoder_out_channels, kernel_size=3, stride=1, padding=1,
                                      bias=False, norm_layer=norm_layer),
             nn.Dropout2d(0.1))
-        
-        self.conv_reduce = nn.Conv2d(decoder_out_channels, reduced_channels, kernel_size=1)   # to reduce channels and work in low dimensions
+
+        # to reduce channels and work in low dimensions
+        self.conv_reduce = nn.Conv2d(decoder_out_channels, reduced_channels, kernel_size=1)
         self.mapper = HyperMapper()
         self.conv_seg = HyperMLR(reduced_channels, num_classes)
-        
 
         self._init_weight()
-
 
     def forward(self, x, size=None):
 

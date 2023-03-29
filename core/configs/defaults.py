@@ -13,6 +13,13 @@ _C.MODEL.FREEZE_BN = False
 _C.MODEL.HYPER = False
 _C.MODEL.REDUCED_CHANNELS = 256
 
+_C.WANDB = CN()
+_C.WANDB.ENABLE = False
+_C.WANDB.NAME = 'test_run'
+_C.WANDB.GROUP = 'deeplabv2_r101_pretrain'
+_C.WANDB.PROJECT = 'active_domain_adapt'
+_C.WANDB.ENTITY = 'pinlab-sapienza'
+
 _C.INPUT = CN()
 _C.INPUT.SOURCE_INPUT_SIZE_TRAIN = (1280, 720)
 _C.INPUT.TARGET_INPUT_SIZE_TRAIN = (1280, 640)
