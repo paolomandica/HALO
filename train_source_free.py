@@ -4,6 +4,7 @@ import datetime
 import logging
 import time
 
+import wandb
 import torch
 import torch.nn as nn
 import torch.utils
@@ -60,6 +61,7 @@ def train(cfg):
         return
 
     # init mask for cityscape
+    logger.info(">>>>>>>>>>>>>>>> Init Mask >>>>>>>>>>>>>>>>")
     DatasetCatalog.initMask(cfg)
 
     # init data loader
@@ -91,6 +93,7 @@ def train(cfg):
 
         # source free active da, active at first
         if iteration in cfg.ACTIVE.SELECT_ITER:
+            logger.info(">>>>>>>>>>>>>>>> Active Round {} >>>>>>>>>>>>>>>>".format(active_round))
             if cfg.ACTIVE.SETTING == "RA":
                 RegionSelection(cfg=cfg,
                                 feature_extractor=feature_extractor,
@@ -171,6 +174,14 @@ def train(cfg):
                 )
             )
 
+            if cfg.WANDB.ENABLE:
+                wandb.log({'iter': iteration,
+                           'active_round': active_round,
+                           'lr': optimizer_fea.param_groups[0]["lr"],
+                           'max mem': torch.cuda.max_memory_allocated() / 1024.0 / 1024.0 / 1024.0
+                           })
+                wandb.log(meters.get_dict())
+
         if iteration == cfg.SOLVER.MAX_ITER or iteration % cfg.SOLVER.CHECKPOINT_PERIOD == 0:
             filename = os.path.join(cfg.OUTPUT_DIR, "model_iter{:06d}.pth".format(iteration))
             torch.save({'iteration': iteration,
@@ -220,6 +231,7 @@ def main():
 
     torch.backends.cudnn.benchmark = True
 
+    cfg.set_new_allowed(True)
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
     cfg.freeze()
@@ -236,6 +248,11 @@ def main():
     logger.info("Running with config:\n{}".format(cfg))
 
     logger.info('Initializing Cityscapes label mask...')
+
+    # init wandb
+    if cfg.WANDB.ENABLE:
+        wandb.init(project=cfg.WANDB.PROJECT, name=cfg.WANDB.NAME,
+                   entity=cfg.WANDB.ENTITY, group=cfg.WANDB.GROUP, config=cfg)
 
     set_random_seed(cfg.SEED)
 

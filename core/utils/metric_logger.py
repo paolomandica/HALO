@@ -60,3 +60,6 @@ class MetricLogger(object):
                 "{}: {:.8f} ({:.8f})".format(name, meter.median, meter.global_avg)
             )
         return self.delimiter.join(loss_str)
+    
+    def get_dict(self):
+        return {name: meter.global_avg for name, meter in self.meters.items()}
