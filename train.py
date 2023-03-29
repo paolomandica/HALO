@@ -111,9 +111,16 @@ def train(cfg):
         tgt_mask = tgt_mask.cuda(non_blocking=True)
 
         src_size = src_input.shape[-2:]
-        src_out = classifier(feature_extractor(src_input), size=src_size)
-        tgt_size = tgt_input.shape[-2:]
-        tgt_out = classifier(feature_extractor(tgt_input), size=tgt_size)
+        
+        if not cfg.MODEL.HYPER:
+            src_out = classifier(feature_extractor(src_input), size=src_size)
+            tgt_size = tgt_input.shape[-2:]
+            tgt_out = classifier(feature_extractor(tgt_input), size=tgt_size)
+        else:
+            src_out, src_decoder_out = classifier(feature_extractor(src_input), size=src_size)
+            tgt_size = tgt_input.shape[-2:]
+            tgt_out, src_decoder_out = classifier(feature_extractor(tgt_input), size=tgt_size)
+
         predict = torch.softmax(tgt_out, dim=1)
 
         # source supervision loss

@@ -120,7 +120,10 @@ def train(cfg):
         tgt_mask = tgt_mask.cuda(non_blocking=True)
 
         tgt_size = tgt_input.shape[-2:]
-        tgt_out = classifier(feature_extractor(tgt_input), size=tgt_size)
+        if not cfg.MODEL.HYPER:
+            tgt_out = classifier(feature_extractor(tgt_input), size=tgt_size)
+        else:
+            tgt_out, decoder_out = classifier(feature_extractor(tgt_input, size=tgt_size), size=tgt_size)
         predict = torch.softmax(tgt_out, dim=1)
 
         loss = torch.Tensor([0]).cuda()

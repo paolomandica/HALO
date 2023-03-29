@@ -32,7 +32,10 @@ def PixelSelection(cfg, feature_extractor, classifier, tgt_epoch_loader):
 
             tgt_size = tgt_input.shape[-2:]
             tgt_feat = feature_extractor(tgt_input)
-            tgt_out = classifier(tgt_feat, size=tgt_size)
+            if not cfg.MODEL.HYPER:
+                tgt_out = classifier(tgt_feat, size=tgt_size)
+            else:
+                tgt_out, decoder_out = classifier(tgt_feat, size=tgt_size)
 
             for i in range(len(origin_mask)):
 
@@ -46,12 +49,15 @@ def PixelSelection(cfg, feature_extractor, classifier, tgt_epoch_loader):
                 output = F.interpolate(output, size=size, mode='bilinear', align_corners=True)
                 output = output.squeeze(dim=0)
                 p = torch.softmax(output, dim=0)
-                entropy = torch.sum(-p * torch.log(p + 1e-6), dim=0)
+                if not cfg.MODEL.HYPER:
+                    uncertainty = torch.sum(-p * torch.log(p + 1e-6), dim=0)
+                else:
+                    uncertainty = decoder_out[i:i + 1, :, :, :]
                 pseudo_label = torch.argmax(p, dim=0)
                 one_hot = F.one_hot(pseudo_label, num_classes=cfg.MODEL.NUM_CLASSES).float()
                 one_hot = one_hot.permute((2, 0, 1)).unsqueeze(dim=0)
                 purity = calculate_purity(one_hot).squeeze(dim=0).squeeze(dim=0)
-                score = entropy * purity
+                score = uncertainty * purity
 
                 score[active] = -float('inf')
 
@@ -110,7 +116,10 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader):
 
             tgt_size = tgt_input.shape[-2:]
             tgt_feat = feature_extractor(tgt_input)
-            tgt_out = classifier(tgt_feat, size=tgt_size)
+            if not cfg.MODEL.HYPER:
+                tgt_out = classifier(tgt_feat, size=tgt_size)
+            else:
+                tgt_out, decoder_out = classifier(tgt_feat, size=tgt_size)
 
             for i in range(len(origin_mask)):
                 active_mask = origin_mask[i].cuda(non_blocking=True)

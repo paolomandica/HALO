@@ -38,7 +38,10 @@ def inference(feature_extractor, classifier, image, label, flip=False):
     if flip:
         image = torch.cat([image, torch.flip(image, [3])], 0)
     with torch.no_grad():
-        output = classifier(feature_extractor(image))
+        if not cfg.MODEL.HYPER:
+            output = classifier(feature_extractor(image))
+        else:
+            output, decoder_out = classifier(feature_extractor(image))
     output = F.interpolate(output, size=size, mode='bilinear', align_corners=True)
     output = F.softmax(output, dim=1)
     if flip:

@@ -1,5 +1,5 @@
 from .feature_extractor import resnet_feature_extractor
-from .classifier import ASPP_Classifier_V2, DepthwiseSeparableASPP
+from .classifier import ASPP_Classifier_V2, DepthwiseSeparableASPP, ASPP_Classifier_V2_Hyper, DepthwiseSeparableASPP_Hyper
 from .layers import FrozenBatchNorm2d
 import torch.nn as nn
 
@@ -21,12 +21,21 @@ def build_classifier(cfg):
         bn_layer = FrozenBatchNorm2d
 
     if deeplab_name == 'deeplabv2':
-        classifier = ASPP_Classifier_V2(2048, [6, 12, 18, 24], [6, 12, 18, 24], cfg.MODEL.NUM_CLASSES)
+        if not cfg.MODEL.HYPER:
+            classifier = ASPP_Classifier_V2(2048, [6, 12, 18, 24], [6, 12, 18, 24], cfg.MODEL.NUM_CLASSES)
+        else:
+            classifier = ASPP_Classifier_V2_Hyper(2048, [6, 12, 18, 24], [6, 12, 18, 24], cfg.MODEL.NUM_CLASSES,
+                                            reduced_channels=cfg.MODEL.REDUCED_CHANNELS)
     elif deeplab_name =='deeplabv3plus':
         if backbone_name.startswith('resnet'):
-            classifier = DepthwiseSeparableASPP(inplanes=2048, dilation_series=[1, 6, 12, 18],
-                                                padding_series=[1, 6, 12, 18], num_classes=cfg.MODEL.NUM_CLASSES,
-                                                norm_layer=bn_layer)
+            if not cfg.MODEL.HYPER:
+                classifier = DepthwiseSeparableASPP(inplanes=2048, dilation_series=[1, 6, 12, 18],
+                                                    padding_series=[1, 6, 12, 18], num_classes=cfg.MODEL.NUM_CLASSES,
+                                                    norm_layer=bn_layer)
+            else:
+                classifier = DepthwiseSeparableASPP_Hyper(inplanes=2048, dilation_series=[1, 6, 12, 18],
+                                                    padding_series=[1, 6, 12, 18], num_classes=cfg.MODEL.NUM_CLASSES,
+                                                    norm_layer=bn_layer, reduced_channels=cfg.MODEL.REDUCED_CHANNELS)
     else:
         raise NotImplementedError
     return classifier

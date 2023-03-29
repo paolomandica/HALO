@@ -89,7 +89,10 @@ def train(cfg):
         src_label = src_label.cuda(non_blocking=True)
 
         src_size = src_input.shape[-2:]
-        src_out = classifier(feature_extractor(src_input), size=src_size)
+        if not cfg.MODEL.HYPER:
+            src_out = classifier(feature_extractor(src_input), size=src_size)
+        else:
+            src_out, decoder_out = classifier(feature_extractor(src_input), size=src_size)
 
         # source supervision loss
         loss = torch.Tensor([0]).cuda()
