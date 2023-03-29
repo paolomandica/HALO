@@ -1,0 +1,21 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "train_source_free",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/train_source_free.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "-cfg", "configs/gtav/deeplabv2_r101_RA_source_free.yaml",
+                "OUTPUT_DIR", "results/v2_gtav_ra_2.2_precent_source_free",
+                "resume", "results/source_free/gtav_source_only_iter020000.pth"
+            ]
+        }
+    ]
+}

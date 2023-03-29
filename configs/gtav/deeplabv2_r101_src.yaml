@@ -9,13 +9,13 @@ INPUT:
   SOURCE_INPUT_SIZE_TRAIN: (1280, 720)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
+  BATCH_SIZE: 2
   BASE_LR: 5e-4
   MAX_ITER: 31250
   STOP_ITER: 20000
-  BATCH_SIZE: 2
 WANDB:
   ENABLE: True
-  PROJECT: 'active_domain_adapt'
   NAME: 'test_run'
-  GROUP: 'deeplabv2_r101_source'
+  GROUP: 'deeplabv2_r101_pretrain'
+  PROJECT: 'active_domain_adapt'
   ENTITY: 'pinlab-sapienza'
