@@ -66,6 +66,8 @@ _C.ACTIVE = CN()
 
 # active strategy
 _C.ACTIVE.NAME = 'AL-RIPU'
+_C.ACTIVE.UNCERTAINTY = 'entropy'
+_C.ACTIVE.PURITY = 'ripu'
 _C.ACTIVE.SETTING = 'RA'
 _C.ACTIVE.SELECT_ITER = [10000, 12000, 14000, 16000, 18000] # for 5 selection rounds
 # total selection ratio per image

@@ -21,3 +21,6 @@ WANDB:
   GROUP: 'gtav_pretraining'
   PROJECT: 'active_domain_adapt'
   ENTITY: 'pinlab-sapienza'
+ACTIVE:
+  UNCERTAINTY: 'hyperbolic' # 'entropy' or 'hyperbolic' or 'none'
+  PURITY: 'ripu'            # 'ripu' or 'none'

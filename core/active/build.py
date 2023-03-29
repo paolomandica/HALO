@@ -49,14 +49,22 @@ def PixelSelection(cfg, feature_extractor, classifier, tgt_epoch_loader):
                 output = F.interpolate(output, size=size, mode='bilinear', align_corners=True)
                 output = output.squeeze(dim=0)
                 p = torch.softmax(output, dim=0)
-                if not cfg.MODEL.HYPER:
+
+                if cfg.ACTIVE.UNCERTAINTY == 'entropy':
                     uncertainty = torch.sum(-p * torch.log(p + 1e-6), dim=0)
-                else:
+                elif cfg.ACTIVE.UNCERTAINTY == 'hyperbolic':
                     uncertainty = decoder_out[i:i + 1, :, :, :]
-                pseudo_label = torch.argmax(p, dim=0)
-                one_hot = F.one_hot(pseudo_label, num_classes=cfg.MODEL.NUM_CLASSES).float()
-                one_hot = one_hot.permute((2, 0, 1)).unsqueeze(dim=0)
-                purity = calculate_purity(one_hot).squeeze(dim=0).squeeze(dim=0)
+                else:
+                    uncertainty = torch.ones_like(p[:1, :, :])
+
+                if cfg.ACTIVE.PURITY == 'ripu':
+                    pseudo_label = torch.argmax(p, dim=0)
+                    one_hot = F.one_hot(pseudo_label, num_classes=cfg.MODEL.NUM_CLASSES).float()
+                    one_hot = one_hot.permute((2, 0, 1)).unsqueeze(dim=0)
+                    purity = calculate_purity(one_hot).squeeze(dim=0).squeeze(dim=0)
+                else:
+                    purity = torch.ones_like(p[:1, :, :])
+                    
                 score = uncertainty * purity
 
                 score[active] = -float('inf')
