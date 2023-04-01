@@ -126,3 +126,4 @@ artifacts
 datasets/cityscapes
 datasets/gtav
 results
+lightning_logs

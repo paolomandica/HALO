@@ -64,8 +64,8 @@ def train(cfg):
 
     # init data loader
     src_train_data = build_dataset(cfg, mode='train', is_source=True)
-    src_train_loader = DataLoader(src_train_data, batch_size=cfg.SOLVER.BATCH_SIZE, shuffle=True, num_workers=4,
-                                  pin_memory=True, drop_last=True)
+    src_train_loader = DataLoader(src_train_data, batch_size=cfg.SOLVER.BATCH_SIZE, shuffle=True,
+                                  num_workers=4, pin_memory=True, drop_last=True)
 
     # init loss
     sup_criterion = nn.CrossEntropyLoss(ignore_index=255)

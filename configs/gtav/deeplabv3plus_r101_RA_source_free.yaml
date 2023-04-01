@@ -1,9 +1,8 @@
 MODEL:
-  NAME: "deeplabv2_resnet101"
+  NAME: "deeplabv3plus_resnet101"
   WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
   FREEZE_BN: True
-  HYPER: True
-  REDUCED_CHANNELS: 256
+  HYPER: False
 DATASETS:
   SOURCE_TRAIN: "gtav_train"
   TARGET_TRAIN: "cityscapes_train"
@@ -20,8 +19,6 @@ SOLVER:
 ACTIVE:
   NAME: 'AL-RIPU'
   SETTING: 'RA'
-  UNCERTAINTY: 'hyperbolic' # 'entropy' or 'hyperbolic' or 'none'
-  PURITY: 'ripu'            # 'ripu' or 'none'
   SELECT_ITER: [0, 2000, 4000, 6000, 8000]
   RATIO: 0.022
   RADIUS_K: 9  # smaller might be better
