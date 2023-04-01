@@ -89,10 +89,16 @@ def test(cfg):
 
     if cfg.resume:
         logger.info("Loading checkpoint from {}".format(cfg.resume))
-        checkpoint = torch.load(cfg.resume, map_location=torch.device('cpu'))
-        feature_extractor_weights = strip_prefix_if_present(checkpoint['feature_extractor'], 'module.')
+        checkpoint = torch.load(cfg.resume, map_location=torch.device('cpu'))['state_dict']
+        # breakpoint()
+        # feature_extractor_weights = strip_prefix_if_present(checkpoint['feature_extractor'], 'module.')
+        feature_extractor_weights = {k: v for k, v in checkpoint.items() if k.startswith('feature_extractor')}
+        feature_extractor_weights = OrderedDict([[k.split('feature_extractor.')[-1], v.cpu()]
+                                                for k, v in feature_extractor_weights.items()])
         feature_extractor.load_state_dict(feature_extractor_weights)
-        classifier_weights = strip_prefix_if_present(checkpoint['classifier'], 'module.')
+        # classifier_weights = strip_prefix_if_present(checkpoint['classifier'], 'module.')
+        classifier_weights = {k: v for k, v in checkpoint.items() if k.startswith('classifier')}
+        classifier_weights = OrderedDict([[k.split('classifier.')[-1], v.cpu()] for k, v in classifier_weights.items()])
         classifier.load_state_dict(classifier_weights)
 
     feature_extractor.eval()
