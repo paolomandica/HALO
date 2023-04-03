@@ -239,10 +239,10 @@ def test(cfg):
 
     if cfg.resume:
         logger.info("Loading checkpoint from {}".format(cfg.resume))
-        load_checkpoint(feature_extractor, cfg.resume, model='feature_extractor')
-        load_checkpoint(classifier, cfg.resume, model='classifier')
-        # load_checkpoint_ripu(feature_extractor, cfg.resume, model='feature_extractor')
-        # load_checkpoint_ripu(classifier, cfg.resume, model='classifier')
+        # load_checkpoint(feature_extractor, cfg.resume, module='feature_extractor')
+        # load_checkpoint(classifier, cfg.resume, module='classifier')
+        load_checkpoint_ripu(feature_extractor, cfg.resume, module='feature_extractor')
+        load_checkpoint_ripu(classifier, cfg.resume, module='classifier')
 
     feature_extractor.eval()
     classifier.eval()
