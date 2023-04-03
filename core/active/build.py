@@ -54,8 +54,10 @@ def PixelSelection(cfg, feature_extractor, classifier, tgt_epoch_loader):
                     uncertainty = torch.sum(-p * torch.log(p + 1e-6), dim=0)
                 elif cfg.ACTIVE.UNCERTAINTY == 'hyperbolic':
                     uncertainty = decoder_out[i:i + 1, :, :, :]
+                    uncertainty = F.interpolate(uncertainty, size=size, mode='bilinear', align_corners=True)
+                    uncertainty = uncertainty.squeeze(0).norm(dim=0, p=2)
                 else:
-                    uncertainty = torch.ones_like(p[:1, :, :])
+                    uncertainty = torch.ones_like(p[0, :, :])
 
                 if cfg.ACTIVE.PURITY == 'ripu':
                     pseudo_label = torch.argmax(p, dim=0)
@@ -63,8 +65,8 @@ def PixelSelection(cfg, feature_extractor, classifier, tgt_epoch_loader):
                     one_hot = one_hot.permute((2, 0, 1)).unsqueeze(dim=0)
                     purity = calculate_purity(one_hot).squeeze(dim=0).squeeze(dim=0)
                 else:
-                    purity = torch.ones_like(p[:1, :, :])
-                    
+                    purity = torch.ones_like(p[0, :, :])
+
                 score = uncertainty * purity
 
                 score[active] = -float('inf')
@@ -103,7 +105,7 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader):
     feature_extractor.eval()
     classifier.eval()
 
-    floating_region_score = FloatingRegionScore(in_channels=cfg.MODEL.NUM_CLASSES, size=2 * cfg.ACTIVE.RADIUS_K + 1).cuda()
+    floating_region_score = FloatingRegionScore(in_channels=cfg.MODEL.NUM_CLASSES, size=2 * cfg.ACTIVE.RADIUS_K + 1, cfg=cfg).cuda()
     per_region_pixels = (2 * cfg.ACTIVE.RADIUS_K + 1) ** 2
     active_radius = cfg.ACTIVE.RADIUS_K
     mask_radius = cfg.ACTIVE.RADIUS_K * 2
@@ -136,10 +138,24 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader):
                 num_pixel_cur = size[0] * size[1]
                 active = active_indicator[i]
                 selected = selected_indicator[i]
-
+                
                 output = tgt_out[i:i + 1, :, :, :]
                 output = F.interpolate(output, size=size, mode='bilinear', align_corners=True)
-                score, purity, entropy = floating_region_score(output)
+
+                if cfg.ACTIVE.UNCERTAINTY == 'entropy':
+                    score, purity, uncertainty = floating_region_score(output)
+                elif cfg.ACTIVE.UNCERTAINTY == 'hyperbolic' or cfg.ACTIVE.UNCERTAINTY == 'certainty':
+                    decoder_out = decoder_out[i:i + 1, :, :, :]
+                    decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
+                    score, purity, uncertainty = floating_region_score(output, decoder_out=decoder_out)
+                elif cfg.ACTIVE.UNCERTAINTY == 'none' and cfg.ACTIVE.PURITY == 'ripu':
+                    if cfg.MODEL.HYPER:
+                        decoder_out = decoder_out[i:i + 1, :, :, :]
+                        decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
+                        score, purity, uncertainty = floating_region_score(output, decoder_out=decoder_out)
+                    else:
+                        score, purity, uncertainty = floating_region_score(output)
+
 
                 score[active] = -float('inf')
 

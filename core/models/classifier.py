@@ -188,6 +188,7 @@ class ASPP_Classifier_V2_Hyper(nn.Module):
 
         if size is not None:
             out = F.interpolate(out, size=size, mode='bilinear', align_corners=True)
+            embed = F.interpolate(embed, size=size, mode='bilinear', align_corners=True)
 
         return out, embed
 

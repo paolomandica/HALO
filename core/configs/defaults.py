@@ -77,11 +77,14 @@ _C.ACTIVE.PIXELS = 40
 # k-neighbor-radius
 _C.ACTIVE.RADIUS_K = 1
 
+
 # ---------------------------------------------------------------------------- #
 # Specific test options
 # ---------------------------------------------------------------------------- #
 _C.TEST = CN()
 _C.TEST.BATCH_SIZE = 1
+_C.TEST.VIZ_SCORE = False
+_C.TEST.VIZ_MASK = False
 
 _C.OUTPUT_DIR = ""
 _C.resume = ""

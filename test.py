@@ -9,6 +9,9 @@ from tqdm import tqdm
 from collections import OrderedDict
 import re
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 import torch
 import torch.nn.functional as F
 import torch.backends.cudnn
@@ -18,10 +21,21 @@ from core.datasets import build_dataset
 from core.models import build_feature_extractor, build_classifier
 from core.utils.misc import mkdir, AverageMeter, intersectionAndUnionGPU, get_color_pallete
 from core.utils.logger import setup_logger
+from core.active.floating_region import FloatingRegionScore
 
 import setproctitle
 import warnings
 warnings.filterwarnings('ignore')
+
+# MEAN : 0.28689554, 0.32513303, 0.28389177 - 123.675, 116.28 , 103.53
+# STD  : 0.18696375, 0.19017339, 0.18720214 - 58.395, 57.12 , 57.375
+CITYSCAPES_MEAN = torch.Tensor([123.675, 116.28, 103.53]).reshape(1,1,3).numpy()
+CITYSCAPES_STD = torch.Tensor([58.395, 57.12, 57.375]).reshape(1,1,3).numpy()
+
+np.random.seed(cfg.SEED+1)
+VIZ_LIST = list(np.random.randint(0, 500, 20))
+
+
 
 def strip_prefix_if_present(state_dict, prefix):
     keys = sorted(state_dict.keys())
@@ -33,7 +47,7 @@ def strip_prefix_if_present(state_dict, prefix):
     return stripped_state_dict
 
 
-def inference(feature_extractor, classifier, image, label, flip=False):
+def inference(feature_extractor, classifier, image, label, flip=False, vis_score=True, vis_mask=False, name=None, cfg=None, idx=None):
     size = label.shape[-2:]
     if flip:
         image = torch.cat([image, torch.flip(image, [3])], 0)
@@ -42,12 +56,26 @@ def inference(feature_extractor, classifier, image, label, flip=False):
             output = classifier(feature_extractor(image))
         else:
             output, decoder_out = classifier(feature_extractor(image))
+
     output = F.interpolate(output, size=size, mode='bilinear', align_corners=True)
     output = F.softmax(output, dim=1)
     if flip:
         output = (output[0] + output[1].flip(2)) / 2
     else:
-        output = output[0]
+        output = output[0]  # 19, h, w
+
+    if cfg.MODEL.HYPER:
+        decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
+        if flip:
+            decoder_out = (decoder_out[0] + decoder_out[1].flip(2)) / 2
+        else:      
+            decoder_out = decoder_out[0]    # ch, h, w
+        
+
+    if vis_score and idx in VIZ_LIST:
+        image = F.interpolate(image, size=size, mode='bilinear', align_corners=True)
+        visualize_score(image[0], output.unsqueeze(dim=0), decoder_out.unsqueeze(dim=0), label, name, cfg)
+
     return output.unsqueeze(dim=0)
 
 
@@ -74,6 +102,128 @@ def transform_color(pred):
     for k, v in synthia_to_city.items():
         label_copy[pred == k] = v
     return label_copy.copy()
+
+
+def visualize_score(image, output, decoder_out, gt_segm_map, name, cfg, cmap1='gray', cmap2='viridis', alpha=0.7):
+
+    floating_region_score = FloatingRegionScore(in_channels=cfg.MODEL.NUM_CLASSES, size=2 * cfg.ACTIVE.RADIUS_K + 1, cfg=cfg).cuda()
+    # per_region_pixels = (2 * cfg.ACTIVE.RADIUS_K + 1) ** 2
+    # active_radius = cfg.ACTIVE.RADIUS_K
+    # mask_radius = cfg.ACTIVE.RADIUS_K * 2
+    # active_ratio = cfg.ACTIVE.RATIO / len(cfg.ACTIVE.SELECT_ITER)
+
+    if cfg.ACTIVE.UNCERTAINTY == 'entropy':
+        score, purity, uncertainty = floating_region_score(output)
+    elif cfg.ACTIVE.UNCERTAINTY == 'hyperbolic' or cfg.ACTIVE.UNCERTAINTY == 'certainty':
+        score, purity, uncertainty = floating_region_score(output, decoder_out=decoder_out)
+    elif cfg.ACTIVE.UNCERTAINTY == 'none' and cfg.ACTIVE.PURITY == 'ripu':
+        if cfg.MODEL.HYPER:
+            score, purity, uncertainty = floating_region_score(output, decoder_out=decoder_out)
+        else:
+            score, purity, uncertainty = floating_region_score(output)
+
+    img_np = image.cpu().numpy().transpose(1, 2, 0)
+    img_np = (img_np * CITYSCAPES_STD + CITYSCAPES_MEAN).astype(np.uint8)
+    # img_np = image.cpu().numpy().astype(np.uint8)  #  Is it denormalized?
+
+    score_np = score.cpu().numpy()
+    uncertainty_np = uncertainty.cpu().numpy()
+    purity_np = purity.cpu().numpy()
+
+
+    fig, axes = plt.subplots(2, 3, constrained_layout = True, figsize=(10, 10))
+
+    axes[0,0].set_title('Total Score')
+    axes[0,0].imshow(img_np, cmap=cmap1)
+    im_score = axes[0,0].imshow(score_np,  cmap=cmap2, alpha=alpha)
+    axes[0,0].xaxis.set_visible(False)
+    axes[0,0].yaxis.set_visible(False)
+    divider = make_axes_locatable(axes[0,0])
+    cax = divider.append_axes("bottom", size="20%", pad=0.05)
+    plt.colorbar(im_score, cax=cax, location='bottom')
+
+    if cfg.ACTIVE.UNCERTAINTY == 'entropy':
+        title = 'Entropy'
+    elif cfg.ACTIVE.UNCERTAINTY == 'hyperbolic':
+        title = 'Hyperbolic Uncertainty'
+    elif cfg.ACTIVE.UNCERTAINTY == 'certainty':
+        title = 'Hyperbolic Certainty'
+    axes[0,1].set_title(title)
+    axes[0,1].imshow(img_np, cmap=cmap1)
+    im_uncertainty = axes[0,1].imshow(uncertainty_np,  cmap=cmap2, alpha=alpha)
+    axes[0,1].xaxis.set_visible(False)
+    axes[0,1].yaxis.set_visible(False)
+    divider = make_axes_locatable(axes[0,1])
+    cax = divider.append_axes("bottom", size="20%", pad=0.05)
+    plt.colorbar(im_uncertainty, cax=cax, location='bottom')
+
+    axes[0,2].set_title('Impurity')
+    axes[0,2].imshow(img_np, cmap=cmap1)
+    im_purity = axes[0,2].imshow(purity_np,  cmap=cmap2, alpha=alpha)
+    axes[0,2].xaxis.set_visible(False)
+    axes[0,2].yaxis.set_visible(False)
+    divider = make_axes_locatable(axes[0,2])
+    cax = divider.append_axes("bottom", size="20%", pad=0.05)
+    plt.colorbar(im_purity, cax=cax, location='bottom')
+
+    # make directory if it doesn't exist
+    if not os.path.exists(cfg.OUTPUT_DIR + '/viz'):
+        os.makedirs(cfg.OUTPUT_DIR + '/viz')
+    name = name.rsplit('/', 1)[-1].rsplit('_', 1)[0]
+    file_name = cfg.OUTPUT_DIR + '/viz/' + name + '.png'
+
+
+
+
+
+
+    pred_segm_map = output.argmax(dim=1).squeeze(dim=0).cpu().numpy()
+    pred_mask = get_color_pallete(pred_segm_map, "city")
+    pred_mask = pred_mask.convert('RGB')
+    gt_segm_map = gt_segm_map.squeeze(dim=0).cpu().numpy()
+    gt_mask = get_color_pallete(gt_segm_map, "city")
+    gt_mask = gt_mask.convert('RGB')
+
+
+
+    # plot gt semantic segmentation map
+    axes[1,0].set_title('GT Segmentation Map')
+    # axes[1,0].imshow(img_np, cmap=cmap1)
+    im_gt = axes[1,0].imshow(gt_mask) #, cmap=cmap2, alpha=alpha)
+    axes[1,0].xaxis.set_visible(False)
+    axes[1,0].yaxis.set_visible(False)
+
+    # plot predicted semantic segmentation map
+    axes[1,1].set_title('Predicted Segmentation Map')
+    # axes[1,1].imshow(img_np, cmap=cmap1)
+    im_pred = axes[1,1].imshow(pred_mask) #, cmap=cmap2, alpha=alpha)
+    axes[1,1].xaxis.set_visible(False)
+    axes[1,1].yaxis.set_visible(False)
+
+    # plot original image
+    axes[1,2].set_title('Original Image')
+    axes[1,2].imshow(img_np)
+    axes[1,2].xaxis.set_visible(False)
+    axes[1,2].yaxis.set_visible(False)
+    
+
+    # plot difference between gt and predicted semantic segmentation map
+    # axes[1,2].set_title('Difference Map')
+    # axes[1,2].imshow(img_np, cmap=cmap1)
+    # diff_map = gt_segm_map != pred_segm_map
+    # im_diff = axes[1,2].imshow(diff_map, cmap=cmap2, alpha=alpha)
+    # axes[1,2].xaxis.set_visible(False)
+    # axes[1,2].yaxis.set_visible(False)
+
+    plt.suptitle(name)
+    plt.savefig(file_name)
+    plt.close()
+
+    # mask = get_color_pallete(pred_segm_map, "city")
+    # if mask.mode == 'P':
+    #     mask = mask.convert('RGB')
+
+
 
 
 def test(cfg):
@@ -114,14 +264,16 @@ def test(cfg):
     assert cfg.TEST.BATCH_SIZE == 1, "Test batch size should be 1!"
     test_loader = torch.utils.data.DataLoader(test_data, batch_size=cfg.TEST.BATCH_SIZE, shuffle=False, num_workers=4,
                                               pin_memory=True, sampler=None)
-
+    idx = 0
     for batch in tqdm(test_loader):
         x, y, name = batch['img'], batch['label'], batch['name']
         name = name[0]
         x = x.cuda(non_blocking=True)
         y = y.cuda(non_blocking=True).long()
 
-        pred = inference(feature_extractor, classifier, x, y, True)
+        flip = False
+        pred = inference(feature_extractor, classifier, x, y, flip=flip, 
+                         vis_score=cfg.TEST.VIZ_SCORE, vis_mask=cfg.TEST.VIZ_MASK, name=name, cfg=cfg, idx=idx)
 
         output = pred.max(1)[1]
         intersection, union, target = intersectionAndUnionGPU(output, y, cfg.MODEL.NUM_CLASSES, cfg.INPUT.IGNORE_LABEL)
@@ -139,6 +291,8 @@ def test(cfg):
         if mask.mode == 'P':
             mask = mask.convert('RGB')
         mask.save(os.path.join(output_folder, mask_filename))
+
+        idx += 1
 
     iou_class = intersection_meter.sum / (union_meter.sum + 1e-10)
     accuracy_class = intersection_meter.sum / (target_meter.sum + 1e-10)
