@@ -271,7 +271,7 @@ def test(cfg):
         x = x.cuda(non_blocking=True)
         y = y.cuda(non_blocking=True).long()
 
-        flip = False
+        flip = True
         pred = inference(feature_extractor, classifier, x, y, flip=flip, 
                          vis_score=cfg.TEST.VIZ_SCORE, vis_mask=cfg.TEST.VIZ_MASK, name=name, cfg=cfg, idx=idx)
 
