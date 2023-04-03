@@ -128,3 +128,4 @@ datasets/gtav
 results
 checkpoints
 scripts/train_scripts_luca.sh
+lightning_logs
