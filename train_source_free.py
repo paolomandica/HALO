@@ -104,7 +104,8 @@ def train(cfg):
                 RegionSelection(cfg=cfg,
                                 feature_extractor=feature_extractor,
                                 classifier=classifier,
-                                tgt_epoch_loader=tgt_epoch_loader)
+                                tgt_epoch_loader=tgt_epoch_loader,
+                                round_number=active_round)
             elif cfg.ACTIVE.SETTING == 'PA':
                 PixelSelection(cfg=cfg,
                                feature_extractor=feature_extractor,

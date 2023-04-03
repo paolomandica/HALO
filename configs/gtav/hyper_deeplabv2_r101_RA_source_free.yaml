@@ -24,8 +24,9 @@ ACTIVE:
   SELECT_ITER: [0, 10001, 15001, 20001, 25001]
   RATIO: 0.022
   RADIUS_K: 1  # smaller might be better
-  UNCERTAINTY: 'certainty' # 'entropy' or 'hyperbolic' or 'certainty' or 'none'
+  UNCERTAINTY: 'entropy' # 'entropy' or 'hyperbolic' or 'certainty' or 'none'
   PURITY: 'ripu'            # 'ripu' or 'none'
+  VIZ_MASK: True
 WANDB:
   ENABLE: True
   PROJECT: 'active_domain_adapt'
