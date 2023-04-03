@@ -1,3 +1,5 @@
+import argparse
+from collections import OrderedDict
 import errno
 import os
 import numpy as np
@@ -6,6 +8,7 @@ from PIL import Image
 import torch
 from torch import nn
 import torch.nn.init as initer
+from core.configs import cfg
 
 
 def mkdir(path):
@@ -112,3 +115,60 @@ def _getvocpallete(num_cls):
             i = i + 1
             lab >>= 3
     return pallete
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Active Domain Adaptive Semantic Segmentation Training")
+    parser.add_argument("-cfg",
+                        "--config-file",
+                        default="",
+                        metavar="FILE",
+                        help="path to config file",
+                        type=str)
+    parser.add_argument("--proctitle",
+                        type=str,
+                        default="AL-RIPU",
+                        help="allow a process to change its title", )
+    parser.add_argument(
+        "opts",
+        help="Modify config options using the command-line",
+        default=None,
+        nargs=argparse.REMAINDER
+    )
+
+    args = parser.parse_args()
+
+    if args.opts is not None:
+        args.opts[-1] = args.opts[-1].strip('\r\n')
+
+    cfg.set_new_allowed(True)
+    cfg.merge_from_file(args.config_file)
+    cfg.merge_from_list(args.opts)
+    cfg.freeze()
+
+    return args
+
+
+def load_checkpoint(model, path, module='feature_extractor'):
+    print("Loading checkpoint from {}".format(path))
+    checkpoint = torch.load(path, map_location=torch.device('cpu'))['state_dict']
+    model_weights = {k: v for k, v in checkpoint.items() if k.startswith(module)}
+    model_weights = OrderedDict([[k.split(module + '.')[-1], v.cpu()] for k, v in model_weights.items()])
+    model.load_state_dict(model_weights)
+
+
+def strip_prefix_if_present(state_dict, prefix):
+    keys = sorted(state_dict.keys())
+    if not all(key.startswith(prefix) for key in keys):
+        return state_dict
+    stripped_state_dict = OrderedDict()
+    for key, value in state_dict.items():
+        stripped_state_dict[key.replace(prefix, "")] = value
+    return stripped_state_dict
+
+
+def load_checkpoint_ripu(model, path, module='feature_extractor'):
+    print("Loading checkpoint from {}".format(path))
+    checkpoint = torch.load(cfg.resume, map_location=torch.device('cpu'))
+    model_weights = strip_prefix_if_present(checkpoint[module], 'module.')
+    model.load_state_dict(model_weights)
