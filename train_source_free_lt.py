@@ -1,32 +1,18 @@
-import warnings
 import setproctitle
+import warnings
+from core.datasets.dataset_path_catalog import DatasetCatalog
 from core.utils.misc import mkdir, parse_args
 from core.configs import cfg
-from core.train_learners import TrainLearner
+from core.train_learners import ActiveLearner
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers.wandb import WandbLogger
-import argparse
-import os
-import sys
 import pytorch_lightning as pl
-import torch
-
-cur_path = os.path.abspath(os.path.dirname(__file__))
-root_path = os.path.split(cur_path)[0]
-sys.path.append(root_path)
-
 
 warnings.filterwarnings('ignore')
-
-torch.backends.cudnn.benchmark = True
-# torch.use_deterministic_algorithms(True)
-torch.backends.cuda.matmul.allow_tf32 = True
-torch.backends.cudnn.allow_tf32 = True
 
 
 def main():
     args = parse_args()
-    print(args, end='\n\n')
 
     output_dir = cfg.OUTPUT_DIR
     if output_dir:
@@ -43,7 +29,7 @@ def main():
 
     pl.seed_everything(cfg.SEED, workers=True)
 
-    learner = TrainLearner(cfg)
+    learner = ActiveLearner(cfg)
 
     checkpoint_callback = ModelCheckpoint(
         save_top_k=1,

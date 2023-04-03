@@ -170,5 +170,6 @@ def strip_prefix_if_present(state_dict, prefix):
 def load_checkpoint_ripu(model, path, module='feature_extractor'):
     print("Loading checkpoint from {}".format(path))
     checkpoint = torch.load(cfg.resume, map_location=torch.device('cpu'))
-    model_weights = strip_prefix_if_present(checkpoint[module], 'module.')
+    model_weights = checkpoint[module]
+    # model_weights = strip_prefix_if_present(checkpoint[module], 'module.')
     model.load_state_dict(model_weights)
