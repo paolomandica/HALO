@@ -3,7 +3,7 @@ MODEL:
   WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
   FREEZE_BN: True
   HYPER: True
-  REDUCED_CHANNELS: 256
+  REDUCED_CHANNELS: 256      # 256 or 10
 DATASETS:
   SOURCE_TRAIN: "gtav_train"
   TARGET_TRAIN: "cityscapes_train"
@@ -13,21 +13,24 @@ INPUT:
   TARGET_INPUT_SIZE_TRAIN: (1280, 640)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
-  BASE_LR: 2.5e-4
+  BASE_LR: 1.e-3
   MAX_ITER: 62500
   STOP_ITER: 30000
+  CHECKPOINT_PERIOD: 5000
   BATCH_SIZE: 2
 ACTIVE:
   NAME: 'AL-RIPU'
   SETTING: 'RA'
-  UNCERTAINTY: 'hyperbolic' # 'entropy' or 'hyperbolic' or 'none'
-  PURITY: 'ripu'            # 'ripu' or 'none'
-  SELECT_ITER: [0, 2000, 4000, 6000, 8000]
+  SELECT_ITER: [0, 10001, 15001, 20001, 25001]
   RATIO: 0.022
-  RADIUS_K: 9  # smaller might be better
+  RADIUS_K: 1  # smaller might be better
+  UNCERTAINTY: 'certainty' # 'entropy' or 'hyperbolic' or 'certainty' or 'none'
+  PURITY: 'ripu'            # 'ripu' or 'none'
 WANDB:
-  ENABLE: False
+  ENABLE: True
   PROJECT: 'active_domain_adapt'
-  NAME: 'test_run'
+  NAME: 'deeplabv2_r101_hyper_RA_source_free_cert_impurity_ch10'
   GROUP: 'deeplabv2_r101_RA_source_free'
   ENTITY: 'pinlab-sapienza'
+TEST:
+  VIZ_SCORE: False
