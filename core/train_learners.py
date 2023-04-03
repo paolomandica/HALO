@@ -1,4 +1,5 @@
 import logging
+import os
 import pytorch_lightning as pl
 import torch.utils.data as data
 import torch
@@ -15,9 +16,9 @@ from core.loss.negative_learning_loss import NegativeLearningLoss
 from core.active.build import PixelSelection, RegionSelection
 
 
-class TrainLearner(pl.LightningModule):
+class BaseLearner(pl.LightningModule):
     def __init__(self, cfg):
-        super(TrainLearner, self).__init__()
+        super().__init__()
         self.cfg = cfg
         self.hyper = cfg.MODEL.HYPER
         self.automatic_optimization = False
@@ -30,8 +31,10 @@ class TrainLearner(pl.LightningModule):
         # resume checkpoint if needed
         if cfg.resume:
             print("Loading checkpoint from {}".format(cfg.resume))
-            self.feature_extractor = load_checkpoint(self.feature_extractor, cfg.resume, module='feature_extractor')
-            self.classifier = load_checkpoint(self.classifier, cfg.resume, module='classifier')
+            # load_checkpoint(self.feature_extractor, cfg.resume, module='feature_extractor')
+            # load_checkpoint(self.classifier, cfg.resume, module='classifier')
+            load_checkpoint_ripu(self.feature_extractor, cfg.resume, module='feature_extractor')
+            load_checkpoint_ripu(self.classifier, cfg.resume, module='classifier')
 
         # create criterion
         self.criterion = nn.CrossEntropyLoss(ignore_index=255)
@@ -41,34 +44,10 @@ class TrainLearner(pl.LightningModule):
         self.union_meter = AverageMeter()
         self.target_meter = AverageMeter()
 
-    def forward(self, src_input):
-        src_size = src_input.shape[-2:]
-        src_out = self.classifier(self.feature_extractor(src_input), size=src_size)
-        return src_out
-
-    def training_step(self, batch, batch_idx):
-        optimizers = self.optimizers()
-        for opt in optimizers:
-            opt.zero_grad()
-
-        src_input, src_label = batch['img'], batch['label']
-        src_out = self.forward(src_input)
-        if self.hyper:
-            src_out = src_out[0]
-
-        loss = self.criterion(src_out, src_label)
-        self.log('loss', loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
-        lr = self.trainer.optimizers[0].param_groups[0]['lr']
-        self.log('lr', lr, on_step=True, on_epoch=False)
-
-        # manual backward pass
-        self.manual_backward(loss)
-        for opt in optimizers:
-            opt.step()
-        for sched in self.lr_schedulers():
-            sched.step()
-
-        return loss
+    def forward(self, input_data):
+        input_size = input_data.shape[-2:]
+        out = self.classifier(self.feature_extractor(input_data), size=input_size)
+        return out
 
     def inference(self, image, label, flip=False):
         size = label.shape[-2:]
@@ -125,7 +104,7 @@ class TrainLearner(pl.LightningModule):
         self.log('mAcc', mAcc, on_step=False, on_epoch=True, sync_dist=True, prog_bar=True)
         self.log('aAcc', aAcc, on_step=False, on_epoch=True, sync_dist=True, prog_bar=True)
 
-    def configure_optimizers_double(self):
+    def configure_optimizers(self):
         if self.hyper:
             optim = RiemannianSGD
         else:
@@ -139,6 +118,35 @@ class TrainLearner(pl.LightningModule):
         scheduler_cls = torch.optim.lr_scheduler.PolynomialLR(
             optimizer_cls, self.cfg.SOLVER.MAX_ITER, power=self.cfg.SOLVER.LR_POWER)
         return [optimizer_fea, optimizer_cls], [scheduler_fea, scheduler_cls]
+
+
+class TrainLearner(BaseLearner):
+    def __init__(self, cfg):
+        super().__init__(cfg)
+
+    def training_step(self, batch, batch_idx):
+        optimizers = self.optimizers()
+        for opt in optimizers:
+            opt.zero_grad()
+
+        src_input, src_label = batch['img'], batch['label']
+        src_out = self.forward(src_input)
+        if self.hyper:
+            src_out = src_out[0]
+
+        loss = self.criterion(src_out, src_label)
+        self.log('loss', loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
+        lr = self.trainer.optimizers[0].param_groups[0]['lr']
+        self.log('lr', lr, on_step=True, on_epoch=False)
+
+        # manual backward pass
+        self.manual_backward(loss)
+        for opt in optimizers:
+            opt.step()
+        for sched in self.lr_schedulers():
+            sched.step()
+
+        return loss
 
     def configure_optimizers(self):
         if self.hyper:
@@ -176,25 +184,9 @@ class TrainLearner(pl.LightningModule):
         return test_loader
 
 
-class ActiveLearner(pl.LightningModule):
+class ActiveLearner(BaseLearner):
     def __init__(self, cfg):
-        super(ActiveLearner, self).__init__()
-        self.cfg = cfg
-        self.hyper = cfg.MODEL.HYPER
-        self.automatic_optimization = False
-
-        # create network
-        self.feature_extractor = build_feature_extractor(cfg)
-        self.classifier = build_classifier(cfg)
-        print(self.classifier)
-
-        # resume checkpoint if needed
-        if cfg.resume:
-            print("Loading checkpoint from {}".format(cfg.resume))
-            # load_checkpoint(self.feature_extractor, cfg.resume, module='feature_extractor')
-            # load_checkpoint(self.classifier, cfg.resume, module='classifier')
-            load_checkpoint_ripu(self.feature_extractor, cfg.resume, module='feature_extractor')
-            load_checkpoint_ripu(self.classifier, cfg.resume, module='classifier')
+        super().__init__(cfg)
 
         # active learning dataloader
         active_set = build_dataset(self.cfg, mode='active', is_source=False, epochwise=True)
@@ -208,27 +200,17 @@ class ActiveLearner(pl.LightningModule):
             persistent_workers=True,)
 
         # init mask for cityscape
-        print(">>>>>>>>>>>>>>>> Init Mask >>>>>>>>>>>>>>>>")
-        DatasetCatalog.initMask(self.cfg)
+        if 'LOCAL_RANK' not in os.environ.keys() and 'NODE_RANK' not in os.environ.keys():
+            print(">>>>>>>>>>>>>>>> Init Mask >>>>>>>>>>>>>>>>")
+            DatasetCatalog.initMask(self.cfg)
 
         # create criterion
-        self.criterion = nn.CrossEntropyLoss(ignore_index=255)
         self.negative_criterion = NegativeLearningLoss()
-
-        # evaluation metrics
-        self.intersection_meter = AverageMeter()
-        self.union_meter = AverageMeter()
-        self.target_meter = AverageMeter()
 
         self.active_round = 1
 
-    def forward(self, tgt_input):
-        tgt_size = tgt_input.shape[-2:]
-        tgt_out = self.classifier(self.feature_extractor(tgt_input), size=tgt_size)
-        return tgt_out
-
     def on_train_batch_start(self, batch, batch_idx):
-        if self.local_rank == 0 and self.global_step in self.cfg.ACTIVE.SELECT_ITER and False:
+        if self.local_rank == 0 and self.global_step in self.cfg.ACTIVE.SELECT_ITER:
             print(">>>>>>>>>>>>>>>> Active Round {} >>>>>>>>>>>>>>>>".format(self.active_round))
             if self.cfg.ACTIVE.SETTING == "RA":
                 RegionSelection(cfg=self.cfg,
@@ -262,15 +244,15 @@ class ActiveLearner(pl.LightningModule):
         if torch.sum((tgt_mask != 255)) != 0:  # target has labeled pixels
             loss_sup = self.criterion(tgt_out, tgt_mask)
             loss += loss_sup
+            self.log('loss_sup', loss_sup.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
 
         # target negative pseudo loss
         if self.cfg.SOLVER.NEGATIVE_LOSS > 0:
             negative_loss = self.negative_criterion(predict) * self.cfg.SOLVER.NEGATIVE_LOSS
             loss += negative_loss
+            self.log('negative_loss', negative_loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
 
         self.log('loss', loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
-        self.log('loss_sup', loss_sup.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
-        self.log('negative_loss', negative_loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
 
         lr = self.trainer.optimizers[0].param_groups[0]['lr']
         self.log('lr', lr, on_step=True, on_epoch=False)
@@ -281,21 +263,6 @@ class ActiveLearner(pl.LightningModule):
             opt.step()
         for sched in self.lr_schedulers():
             sched.step()
-
-    def configure_optimizers(self):
-        if self.hyper:
-            optim = RiemannianSGD
-        else:
-            optim = torch.optim.SGD
-        optimizer_fea = optim(self.feature_extractor.parameters(), lr=self.cfg.SOLVER.BASE_LR,
-                              momentum=self.cfg.SOLVER.MOMENTUM, weight_decay=self.cfg.SOLVER.WEIGHT_DECAY)
-        optimizer_cls = optim(self.classifier.parameters(), lr=self.cfg.SOLVER.BASE_LR * 10,
-                              momentum=self.cfg.SOLVER.MOMENTUM, weight_decay=self.cfg.SOLVER.WEIGHT_DECAY)
-        scheduler_fea = torch.optim.lr_scheduler.PolynomialLR(
-            optimizer_fea, self.cfg.SOLVER.MAX_ITER, power=self.cfg.SOLVER.LR_POWER)
-        scheduler_cls = torch.optim.lr_scheduler.PolynomialLR(
-            optimizer_cls, self.cfg.SOLVER.MAX_ITER, power=self.cfg.SOLVER.LR_POWER)
-        return [optimizer_fea, optimizer_cls], [scheduler_fea, scheduler_cls]
 
     def train_dataloader(self):
         train_set = build_dataset(self.cfg, mode='train', is_source=False)
