@@ -53,7 +53,7 @@ def main():
         logger=wandb_logger,
         callbacks=[checkpoint_callback],
         check_val_every_n_epoch=1,
-        val_check_interval=1000,
+        val_check_interval=400,
         precision=32,
         detect_anomaly=True)
 
