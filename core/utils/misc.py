@@ -138,7 +138,7 @@ def parse_args():
 
     args = parser.parse_args()
 
-    if args.opts is not None:
+    if args.opts is not None and args.opts != []:
         args.opts[-1] = args.opts[-1].strip('\r\n')
 
     cfg.set_new_allowed(True)
