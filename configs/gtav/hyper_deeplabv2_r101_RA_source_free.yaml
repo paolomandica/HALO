@@ -13,27 +13,27 @@ INPUT:
   TARGET_INPUT_SIZE_TRAIN: (1280, 640)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
-  GPUS: [0, 1, 2, 3]
+  GPUS: [4, 5, 6, 7]
   EPOCHS: 30
   BASE_LR: 1.e-3
   MAX_ITER: None
   STOP_ITER: 30000
   CHECKPOINT_PERIOD: 1
-  BATCH_SIZE: 4
+  BATCH_SIZE: 2
 ACTIVE:
   NAME: 'AL-RIPU'
   SETTING: 'RA'
   # SELECT_ITER: [0, 10001, 15001, 20001, 25001]
-  SELECT_EPOCH: [0, 10, 15, 20, 25]
+  SELECT_EPOCH: [1, 10, 15, 20, 25]
   RATIO: 0.022
   RADIUS_K: 1  # smaller might be better
   UNCERTAINTY: 'entropy' # 'entropy' or 'hyperbolic' or 'certainty' or 'none'
   PURITY: 'ripu'            # 'ripu' or 'none'
   VIZ_MASK: True
 WANDB:
-  ENABLE: False
+  ENABLE: True
   PROJECT: 'active_domain_adapt'
-  NAME: 'dlv2_RA_hyper_ripu_gpus_4_bs_4'
+  NAME: 'dlv2_RA_hyper_ripu_gpus_4_bs_2'
   GROUP: 'source_free'
   ENTITY: 'pinlab-sapienza'
 TEST:

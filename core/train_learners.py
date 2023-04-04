@@ -43,6 +43,8 @@ class BaseLearner(pl.LightningModule):
         self.intersection_meter = AverageMeter()
         self.union_meter = AverageMeter()
         self.target_meter = AverageMeter()
+        self.validation_step_outputs = []
+        self.validation_step_labels = []
 
     def forward(self, input_data):
         input_size = input_data.shape[-2:]
@@ -83,11 +85,22 @@ class BaseLearner(pl.LightningModule):
         pred = self.inference(x, y, flip=True)
 
         output = torch.argmax(pred, dim=1)
-        intersection, union, target = self.intersectionAndUnionGPU(
-            output, y, self.cfg.MODEL.NUM_CLASSES, self.cfg.INPUT.IGNORE_LABEL)
-        self.intersection_meter.update(intersection), self.union_meter.update(union), self.target_meter.update(target)
+        self.validation_step_outputs.append(output)
+        self.validation_step_labels.append(y)
+        # intersection, union, target = self.intersectionAndUnionGPU(
+        #     output, y, self.cfg.MODEL.NUM_CLASSES, self.cfg.INPUT.IGNORE_LABEL)
+        # self.intersection_meter.update(intersection), self.union_meter.update(union), self.target_meter.update(target)
 
     def on_validation_epoch_end(self):
+        outputs = self.all_gather(self.validation_step_outputs)
+        labels = self.all_gather(self.validation_step_labels)
+        outputs = torch.cat(outputs).squeeze()
+        labels = torch.cat(labels).squeeze()
+        intersection, union, target = self.intersectionAndUnionGPU(
+            outputs, labels, self.cfg.MODEL.NUM_CLASSES, self.cfg.INPUT.IGNORE_LABEL)
+        self.intersection_meter.update(intersection), self.union_meter.update(
+            union), self.target_meter.update(target)
+
         iou_class = self.intersection_meter.sum / (self.union_meter.sum + 1e-10)
         accuracy_class = self.intersection_meter.sum / (self.target_meter.sum + 1e-10)
 
@@ -103,6 +116,8 @@ class BaseLearner(pl.LightningModule):
         self.log('mIoU', mIoU, on_step=False, on_epoch=True, sync_dist=True, prog_bar=True)
         self.log('mAcc', mAcc, on_step=False, on_epoch=True, sync_dist=True, prog_bar=True)
         self.log('aAcc', aAcc, on_step=False, on_epoch=True, sync_dist=True, prog_bar=True)
+
+        self.validation_step_outputs.clear()
 
     def configure_optimizers(self):
         if self.hyper:
@@ -210,7 +225,7 @@ class ActiveLearner(BaseLearner):
 
         self.active_round = 1
 
-    def on_train_batch_start(self, batch, batch_idx):
+    def on_train_epoch_start(self):
         # if self.local_rank == 0 and self.global_step in self.cfg.ACTIVE.SELECT_ITER:
         if self.local_rank == 0 and self.current_epoch in self.cfg.ACTIVE.SELECT_EPOCH and not self.debug:
             print(">>>>>>>>>>>>>>>> Active Round {} >>>>>>>>>>>>>>>>".format(self.active_round))
@@ -226,7 +241,6 @@ class ActiveLearner(BaseLearner):
                                classifier=self.classifier,
                                tgt_epoch_loader=self.active_loader,
                                round_number=self.active_round)
-        return batch, batch_idx
 
     def training_step(self, batch, batch_idx):
 
