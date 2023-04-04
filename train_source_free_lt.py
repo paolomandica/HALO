@@ -36,16 +36,16 @@ def main():
         monitor="mIoU",
         mode="max",
         dirpath=cfg.OUTPUT_DIR,
-        filename="model_{epoch:02d}_{mIoU:.2f}",
+        filename="model_{global_step:02d}_{mIoU:.2f}",
     )
 
     # init trainer
     trainer = pl.Trainer(
         accelerator='gpu',
         devices=cfg.SOLVER.GPUS,
-        max_epochs=cfg.SOLVER.EPOCHS,
-        # max_steps=cfg.SOLVER.STOP_ITER,
-        log_every_n_steps=20,
+        max_epochs=1,
+        max_steps=cfg.SOLVER.MAX_ITER,
+        log_every_n_steps=50,
         accumulate_grad_batches=1,
         sync_batchnorm=True,
         strategy="ddp",
@@ -53,7 +53,7 @@ def main():
         logger=wandb_logger,
         callbacks=[checkpoint_callback],
         check_val_every_n_epoch=1,
-        # val_check_interval=1000,
+        val_check_interval=1000,
         precision=32,
         detect_anomaly=True)
 

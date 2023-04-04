@@ -16,12 +16,11 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from core.utils.misc import get_color_pallete
 
-CITYSCAPES_MEAN = torch.Tensor([123.675, 116.28, 103.53]).reshape(1,1,3).numpy()
-CITYSCAPES_STD = torch.Tensor([58.395, 57.12, 57.375]).reshape(1,1,3).numpy()
+CITYSCAPES_MEAN = torch.Tensor([123.675, 116.28, 103.53]).reshape(1, 1, 3).numpy()
+CITYSCAPES_STD = torch.Tensor([58.395, 57.12, 57.375]).reshape(1, 1, 3).numpy()
 
 np.random.seed(cfg.SEED+1)
 VIZ_LIST = list(np.random.randint(0, 500, 20))
-
 
 
 def PixelSelection(cfg, feature_extractor, classifier, tgt_epoch_loader):
@@ -119,7 +118,8 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
     feature_extractor.eval()
     classifier.eval()
 
-    floating_region_score = FloatingRegionScore(in_channels=cfg.MODEL.NUM_CLASSES, size=2 * cfg.ACTIVE.RADIUS_K + 1, cfg=cfg).cuda()
+    floating_region_score = FloatingRegionScore(
+        in_channels=cfg.MODEL.NUM_CLASSES, size=2 * cfg.ACTIVE.RADIUS_K + 1, cfg=cfg).cuda()
     per_region_pixels = (2 * cfg.ACTIVE.RADIUS_K + 1) ** 2
     active_radius = cfg.ACTIVE.RADIUS_K
     mask_radius = cfg.ACTIVE.RADIUS_K * 2
@@ -128,7 +128,6 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
     with torch.no_grad():
         idx = 0
         for tgt_data in tqdm(tgt_epoch_loader):
-
             tgt_input, path2mask = tgt_data['img'], tgt_data['path_to_mask']
             origin_mask, origin_label = \
                 tgt_data['origin_mask'], tgt_data['origin_label']
@@ -154,7 +153,7 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                 num_pixel_cur = size[0] * size[1]
                 active = active_indicator[i]
                 selected = selected_indicator[i]
-                
+
                 output = tgt_out[i:i + 1, :, :, :]
                 output = F.interpolate(output, size=size, mode='bilinear', align_corners=True)
 
@@ -171,7 +170,6 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                         score, purity, uncertainty = floating_region_score(output, decoder_out=decoder_out)
                     else:
                         score, purity, uncertainty = floating_region_score(output)
-
 
                 score[active] = -float('inf')
 
@@ -211,7 +209,8 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                 torch.save(indicator, path2indicator[i])
 
             if cfg.ACTIVE.VIZ_MASK and idx in VIZ_LIST:
-                img_np = F.interpolate(tgt_input, size=size, mode='bilinear', align_corners=True).cpu().numpy()[0].transpose(1, 2, 0)
+                img_np = F.interpolate(tgt_input, size=size, mode='bilinear',
+                                       align_corners=True).cpu().numpy()[0].transpose(1, 2, 0)
                 img_np = (img_np * CITYSCAPES_STD + CITYSCAPES_MEAN).astype(np.uint8)
                 # active_mask_np = F.interpolate(torch.Tensor(active_mask_np).unsqueeze(0).unsqueeze(0), size=torch.Size(img_np.shape[:2]), mode='bilinear', align_corners=True)
                 # active_mask_np = active_mask_np.cpu().numpy().squeeze(0).squeeze(0)
@@ -224,24 +223,15 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
     classifier.train()
 
 
-
-
-
-
-
-
-
 def visualization_plots(img_np, score_np, active_mask_np, round_number, name, cmap1='gray', cmap2='viridis', alpha=0.7):
 
     fig, axes = plt.subplots(3, 1, constrained_layout=True, figsize=(10, 10))
-
 
     # plot original image
     # axes[0].set_title('Original Image')
     axes[0].imshow(img_np)
     axes[0].xaxis.set_visible(False)
     axes[0].yaxis.set_visible(False)
-
 
     if cfg.ACTIVE.UNCERTAINTY == 'entropy':
         title = 'Entropy + '
@@ -264,7 +254,6 @@ def visualization_plots(img_np, score_np, active_mask_np, round_number, name, cm
     cax = divider.append_axes("right", size="20%", pad=0.05)
     plt.colorbar(im_score, cax=cax, location='right')
 
-
     # plot original image
     axes[2].set_title('Selected Pixel - Active Round: '+str(round_number))
     axes[2].imshow(img_np, cmap=cmap1)
@@ -272,14 +261,11 @@ def visualization_plots(img_np, score_np, active_mask_np, round_number, name, cm
     axes[2].xaxis.set_visible(False)
     axes[2].yaxis.set_visible(False)
 
-
     # make directory if it doesn't exist
     if not os.path.exists(cfg.OUTPUT_DIR + '/viz'):
         os.makedirs(cfg.OUTPUT_DIR + '/viz')
     name = name.rsplit('/', 1)[-1].rsplit('_', 1)[0]
-    file_name = cfg.OUTPUT_DIR + '/viz/' + name +'_round'+str(round_number)+'.png'
-
-
+    file_name = cfg.OUTPUT_DIR + '/viz/' + name + '_round'+str(round_number)+'.png'
 
     plt.suptitle(name)
     plt.savefig(file_name)
