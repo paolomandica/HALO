@@ -255,7 +255,7 @@ def visualization_plots(img_np, score_np, active_mask_np, round_number, name, cm
     if cfg.ACTIVE.PURITY == 'ripu':
         title += 'Impurity'
 
-    axes[1].set_title('Total Score:'+title)
+    axes[1].set_title('Total Score: '+title)
     axes[1].imshow(img_np, cmap=cmap1)
     im_score = axes[1].imshow(score_np,  cmap=cmap2, alpha=alpha)
     axes[1].xaxis.set_visible(False)
