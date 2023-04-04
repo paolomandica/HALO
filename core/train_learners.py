@@ -216,12 +216,14 @@ class ActiveLearner(BaseLearner):
                 RegionSelection(cfg=self.cfg,
                                 feature_extractor=self.feature_extractor,
                                 classifier=self.classifier,
-                                tgt_epoch_loader=self.active_loader)
+                                tgt_epoch_loader=self.active_loader,
+                                round_number=self.active_round)
             elif self.cfg.ACTIVE.SETTING == 'PA':
                 PixelSelection(cfg=self.cfg,
                                feature_extractor=self.feature_extractor,
                                classifier=self.classifier,
-                               tgt_epoch_loader=self.active_loader)
+                               tgt_epoch_loader=self.active_loader,
+                               round_number=self.active_round)
         return batch, batch_idx
 
     def training_step(self, batch, batch_idx):

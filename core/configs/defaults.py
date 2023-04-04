@@ -76,6 +76,8 @@ _C.ACTIVE.RATIO = 0.022
 _C.ACTIVE.PIXELS = 40
 # k-neighbor-radius
 _C.ACTIVE.RADIUS_K = 1
+# selected pixel visualization
+_C.ACTIVE.VIZ_MASK = True
 
 
 # ---------------------------------------------------------------------------- #

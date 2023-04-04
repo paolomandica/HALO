@@ -277,7 +277,7 @@ def visualization_plots(img_np, score_np, active_mask_np, round_number, name, cm
     if not os.path.exists(cfg.OUTPUT_DIR + '/viz'):
         os.makedirs(cfg.OUTPUT_DIR + '/viz')
     name = name.rsplit('/', 1)[-1].rsplit('_', 1)[0]
-    file_name = cfg.OUTPUT_DIR + '/viz/' + name + '.png'
+    file_name = cfg.OUTPUT_DIR + '/viz/' + name +'_round'+str(round_number)+'.png'
 
 
 
