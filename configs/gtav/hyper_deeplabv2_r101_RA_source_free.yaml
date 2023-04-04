@@ -38,4 +38,5 @@ WANDB:
   ENTITY: 'pinlab-sapienza'
 TEST:
   VIZ_SCORE: False
+  VIZ_WRONG: False
 DEBUG: 0
