@@ -2,6 +2,7 @@ import logging
 import os
 import pytorch_lightning as pl
 import torch.utils.data as data
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -40,11 +41,9 @@ class BaseLearner(pl.LightningModule):
         self.criterion = nn.CrossEntropyLoss(ignore_index=255)
 
         # evaluation metrics
-        self.intersection_meter = AverageMeter()
-        self.union_meter = AverageMeter()
-        self.target_meter = AverageMeter()
-        self.validation_step_outputs = []
-        self.validation_step_labels = []
+        self.intersections = np.array([])
+        self.unions = np.array([])
+        self.targets = np.array([])
 
     def forward(self, input_data):
         input_size = input_data.shape[-2:]
@@ -85,39 +84,54 @@ class BaseLearner(pl.LightningModule):
         pred = self.inference(x, y, flip=True)
 
         output = torch.argmax(pred, dim=1)
-        self.validation_step_outputs.append(output)
-        self.validation_step_labels.append(y)
-        # intersection, union, target = self.intersectionAndUnionGPU(
-        #     output, y, self.cfg.MODEL.NUM_CLASSES, self.cfg.INPUT.IGNORE_LABEL)
-        # self.intersection_meter.update(intersection), self.union_meter.update(union), self.target_meter.update(target)
+        intersection, union, target = self.intersectionAndUnionGPU(
+            output, y, self.cfg.MODEL.NUM_CLASSES, self.cfg.INPUT.IGNORE_LABEL)
+
+        if self.intersections.size == 0:
+            self.intersections = intersection
+            self.unions = union
+            self.targets = target
+        else:
+            self.intersections = np.stack((self.intersections, intersection), axis=0)
+            self.unions = np.stack((self.unions, union), axis=0)
+            self.targets = np.stack((self.targets, target), axis=0)
 
     def on_validation_epoch_end(self):
-        outputs = self.all_gather(self.validation_step_outputs)
-        labels = self.all_gather(self.validation_step_labels)
-        outputs = torch.cat(outputs).squeeze()
-        labels = torch.cat(labels).squeeze()
-        intersection, union, target = self.intersectionAndUnionGPU(
-            outputs, labels, self.cfg.MODEL.NUM_CLASSES, self.cfg.INPUT.IGNORE_LABEL)
-        self.intersection_meter.update(intersection), self.union_meter.update(
-            union), self.target_meter.update(target)
+        # gather all the metrics across all the processes
+        intersections = self.all_gather(self.intersections)
+        unions = self.all_gather(self.unions)
+        targets = self.all_gather(self.targets)
 
-        iou_class = self.intersection_meter.sum / (self.union_meter.sum + 1e-10)
-        accuracy_class = self.intersection_meter.sum / (self.target_meter.sum + 1e-10)
+        intersections = intersections.flatten(0, 1)
+        unions = unions.flatten(0, 1)
+        targets = targets.flatten(0, 1)
+
+        # calculate the final mean iou and accuracy
+        intersections = intersections.sum(axis=0)
+        unions = unions.sum(axis=0)
+        targets = targets.sum(axis=0)
+
+        iou_class = intersections / (unions + 1e-10)
+        accuracy_class = intersections / (targets + 1e-10)
 
         mIoU = iou_class.mean() * 100
         mAcc = accuracy_class.mean() * 100
-        aAcc = self.intersection_meter.sum.sum() / (self.target_meter.sum.sum() + 1e-10) * 100
+        aAcc = intersections.sum() / (targets.sum() + 1e-10) * 100
 
         # print metrics table style
         print('\nmIoU: {:.2f}'.format(mIoU))
         print('mAcc: {:.2f}'.format(mAcc))
         print('aAcc: {:.2f}\n'.format(aAcc))
 
+        # log metrics
         self.log('mIoU', mIoU, on_step=False, on_epoch=True, sync_dist=True, prog_bar=True)
         self.log('mAcc', mAcc, on_step=False, on_epoch=True, sync_dist=True, prog_bar=True)
         self.log('aAcc', aAcc, on_step=False, on_epoch=True, sync_dist=True, prog_bar=True)
 
-        self.validation_step_outputs.clear()
+        # reset metrics
+        self.intersections = np.array([])
+        self.unions = np.array([])
+        self.targets = np.array([])
 
     def configure_optimizers(self):
         if self.hyper:
@@ -203,7 +217,9 @@ class ActiveLearner(BaseLearner):
     def __init__(self, cfg):
         super().__init__(cfg)
 
-        self.debug = False
+        self.debug = bool(cfg.DEBUG)
+        if self.debug:
+            print(">>>>>>>>>>>>>>>> Debug Mode >>>>>>>>>>>>>>>>")
 
         # active learning dataloader
         active_set = build_dataset(self.cfg, mode='active', is_source=False, epochwise=True)
@@ -224,10 +240,17 @@ class ActiveLearner(BaseLearner):
         self.negative_criterion = NegativeLearningLoss()
 
         self.active_round = 1
+        self.compute_active_iters()
+
+    def compute_active_iters(self):
+        data_len = len(self.train_dataloader().dataset)
+        denom = self.cfg.SOLVER.MAX_ITER * self.cfg.SOLVER.BATCH_SIZE * len(self.cfg.SOLVER.GPUS)
+        self.active_iters = [int(x*data_len/denom) for x in self.cfg.ACTIVE.SELECT_ITER]
+        print("\nActive learning at iters: {}\n".format(self.active_iters))
+        self.active_iters = [x * self.cfg.SOLVER.BATCH_SIZE for x in self.active_iters]
 
     def on_train_batch_start(self, batch, batch_idx):
-        if self.trainer.is_global_zero and self.global_step in self.cfg.ACTIVE.SELECT_ITER and not self.debug:
-        # if self.trainer.is_global_zero and self.current_epoch in self.cfg.ACTIVE.SELECT_EPOCH and not self.debug:
+        if self.trainer.is_global_zero and self.global_step in self.active_iters and not self.debug:
             print(">>>>>>>>>>>>>>>> Active Round {} >>>>>>>>>>>>>>>>".format(self.active_round))
             if self.cfg.ACTIVE.SETTING == "RA":
                 RegionSelection(cfg=self.cfg,
