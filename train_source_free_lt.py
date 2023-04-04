@@ -43,8 +43,8 @@ def main():
     trainer = pl.Trainer(
         accelerator='gpu',
         devices=cfg.SOLVER.GPUS,
-        max_epochs=1000,
-        max_steps=cfg.SOLVER.STOP_ITER,
+        max_epochs=cfg.SOLVER.EPOCHS,
+        # max_steps=cfg.SOLVER.STOP_ITER,
         log_every_n_steps=20,
         accumulate_grad_batches=1,
         sync_batchnorm=True,
@@ -53,7 +53,7 @@ def main():
         logger=wandb_logger,
         callbacks=[checkpoint_callback],
         check_val_every_n_epoch=1,
-        val_check_interval=1000,
+        # val_check_interval=1000,
         precision=32,
         detect_anomaly=True)
 

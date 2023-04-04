@@ -114,9 +114,9 @@ class BaseLearner(pl.LightningModule):
         optimizer_cls = optim(self.classifier.parameters(), lr=self.cfg.SOLVER.BASE_LR * 10,
                               momentum=self.cfg.SOLVER.MOMENTUM, weight_decay=self.cfg.SOLVER.WEIGHT_DECAY)
         scheduler_fea = torch.optim.lr_scheduler.PolynomialLR(
-            optimizer_fea, self.cfg.SOLVER.MAX_ITER, power=self.cfg.SOLVER.LR_POWER)
+            optimizer_fea, self.cfg.SOLVER.EPOCHS, power=self.cfg.SOLVER.LR_POWER)
         scheduler_cls = torch.optim.lr_scheduler.PolynomialLR(
-            optimizer_cls, self.cfg.SOLVER.MAX_ITER, power=self.cfg.SOLVER.LR_POWER)
+            optimizer_cls, self.cfg.SOLVER.EPOCHS, power=self.cfg.SOLVER.LR_POWER)
         return [optimizer_fea, optimizer_cls], [scheduler_fea, scheduler_cls]
 
 
@@ -188,6 +188,8 @@ class ActiveLearner(BaseLearner):
     def __init__(self, cfg):
         super().__init__(cfg)
 
+        self.debug = False
+
         # active learning dataloader
         active_set = build_dataset(self.cfg, mode='active', is_source=False, epochwise=True)
         self.active_loader = DataLoader(
@@ -196,11 +198,10 @@ class ActiveLearner(BaseLearner):
             shuffle=False,
             num_workers=4,
             pin_memory=True,
-            drop_last=False,
-            persistent_workers=True,)
+            drop_last=False,)
 
         # init mask for cityscape
-        if 'LOCAL_RANK' not in os.environ.keys() and 'NODE_RANK' not in os.environ.keys():
+        if 'LOCAL_RANK' not in os.environ.keys() and 'NODE_RANK' not in os.environ.keys() and not self.debug:
             print(">>>>>>>>>>>>>>>> Init Mask >>>>>>>>>>>>>>>>")
             DatasetCatalog.initMask(self.cfg)
 
@@ -210,7 +211,8 @@ class ActiveLearner(BaseLearner):
         self.active_round = 1
 
     def on_train_batch_start(self, batch, batch_idx):
-        if self.local_rank == 0 and self.global_step in self.cfg.ACTIVE.SELECT_ITER:
+        # if self.local_rank == 0 and self.global_step in self.cfg.ACTIVE.SELECT_ITER:
+        if self.local_rank == 0 and self.current_epoch in self.cfg.ACTIVE.SELECT_EPOCH and not self.debug:
             print(">>>>>>>>>>>>>>>> Active Round {} >>>>>>>>>>>>>>>>".format(self.active_round))
             if self.cfg.ACTIVE.SETTING == "RA":
                 RegionSelection(cfg=self.cfg,
@@ -265,7 +267,7 @@ class ActiveLearner(BaseLearner):
             sched.step()
 
     def train_dataloader(self):
-        train_set = build_dataset(self.cfg, mode='train', is_source=False)
+        train_set = build_dataset(self.cfg, mode='train', is_source=False, epochwise=True)
         train_loader = DataLoader(
             dataset=train_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
@@ -277,7 +279,7 @@ class ActiveLearner(BaseLearner):
         return train_loader
 
     def val_dataloader(self):
-        test_set = build_dataset(self.cfg, mode='test', is_source=False)
+        test_set = build_dataset(self.cfg, mode='test', is_source=False, epochwise=True)
         test_loader = DataLoader(
             dataset=test_set,
             batch_size=self.cfg.TEST.BATCH_SIZE,
