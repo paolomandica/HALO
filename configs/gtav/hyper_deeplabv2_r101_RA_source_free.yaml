@@ -29,6 +29,7 @@ ACTIVE:
   RADIUS_K: 1  # smaller might be better
   UNCERTAINTY: 'entropy' # 'entropy' or 'hyperbolic' or 'certainty' or 'none'
   PURITY: 'ripu'            # 'ripu' or 'none'
+  VIZ_MASK: True
 WANDB:
   ENABLE: False
   PROJECT: 'active_domain_adapt'

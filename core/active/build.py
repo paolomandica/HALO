@@ -10,6 +10,20 @@ from .floating_region import FloatingRegionScore
 from .spatial_purity import SpatialPurity
 
 
+import os
+from core.configs import cfg
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from core.utils.misc import get_color_pallete
+
+CITYSCAPES_MEAN = torch.Tensor([123.675, 116.28, 103.53]).reshape(1,1,3).numpy()
+CITYSCAPES_STD = torch.Tensor([58.395, 57.12, 57.375]).reshape(1,1,3).numpy()
+
+np.random.seed(cfg.SEED+1)
+VIZ_LIST = list(np.random.randint(0, 500, 20))
+
+
+
 def PixelSelection(cfg, feature_extractor, classifier, tgt_epoch_loader):
     feature_extractor.eval()
     classifier.eval()
@@ -100,7 +114,7 @@ def PixelSelection(cfg, feature_extractor, classifier, tgt_epoch_loader):
     classifier.train()
 
 
-def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader):
+def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_number):
 
     feature_extractor.eval()
     classifier.eval()
@@ -112,6 +126,7 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader):
     active_ratio = cfg.ACTIVE.RATIO / len(cfg.ACTIVE.SELECT_ITER)
 
     with torch.no_grad():
+        idx = 0
         for tgt_data in tqdm(tgt_epoch_loader):
 
             tgt_input, path2mask = tgt_data['img'], tgt_data['path_to_mask']
@@ -131,6 +146,7 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader):
             else:
                 tgt_out, decoder_out = classifier(tgt_feat, size=tgt_size)
 
+            # just a single iteration, because len(origin_mask)=1
             for i in range(len(origin_mask)):
                 active_mask = origin_mask[i].cuda(non_blocking=True)
                 ground_truth = origin_label[i].cuda(non_blocking=True)
@@ -185,14 +201,86 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader):
                     active_mask[active_start_h:active_end_h, active_start_w:active_end_w] = \
                         ground_truth[active_start_h:active_end_h, active_start_w:active_end_w]
 
-                active_mask = Image.fromarray(np.array(active_mask.cpu().numpy(), dtype=np.uint8))
-                active_mask.save(path2mask[i])
+                active_mask_np = np.array(active_mask.cpu().numpy(), dtype=np.uint8)
+                active_mask_IMG = Image.fromarray(active_mask_np)
+                active_mask_IMG.save(path2mask[i])
                 indicator = {
                     'active': active,
                     'selected': selected
                 }
                 torch.save(indicator, path2indicator[i])
 
+            if cfg.ACTIVE.VIZ_MASK and idx in VIZ_LIST:
+                img_np = F.interpolate(tgt_input, size=size, mode='bilinear', align_corners=True).cpu().numpy()[0].transpose(1, 2, 0)
+                img_np = (img_np * CITYSCAPES_STD + CITYSCAPES_MEAN).astype(np.uint8)
+                # active_mask_np = F.interpolate(torch.Tensor(active_mask_np).unsqueeze(0).unsqueeze(0), size=torch.Size(img_np.shape[:2]), mode='bilinear', align_corners=True)
+                # active_mask_np = active_mask_np.cpu().numpy().squeeze(0).squeeze(0)
+                score_np = score.cpu().numpy()
+                name = tgt_data['name'][0]
+                visualization_plots(img_np, score_np, active_mask_np, round_number, name)
+            idx += 1
+
     feature_extractor.train()
     classifier.train()
 
+
+
+
+
+
+
+
+
+def visualization_plots(img_np, score_np, active_mask_np, round_number, name, cmap1='gray', cmap2='viridis', alpha=0.7):
+
+    fig, axes = plt.subplots(3, 1, constrained_layout=True, figsize=(10, 10))
+
+
+    # plot original image
+    # axes[0].set_title('Original Image')
+    axes[0].imshow(img_np)
+    axes[0].xaxis.set_visible(False)
+    axes[0].yaxis.set_visible(False)
+
+
+    if cfg.ACTIVE.UNCERTAINTY == 'entropy':
+        title = 'Entropy + '
+    elif cfg.ACTIVE.UNCERTAINTY == 'hyperbolic':
+        title = 'Hyperbolic Uncertainty + '
+    elif cfg.ACTIVE.UNCERTAINTY == 'certainty':
+        title = 'Hyperbolic Certainty + '
+    else:
+        title = ''
+
+    if cfg.ACTIVE.PURITY == 'ripu':
+        title += 'Impurity'
+
+    axes[1].set_title('Total Score: '+title)
+    axes[1].imshow(img_np, cmap=cmap1)
+    im_score = axes[1].imshow(score_np,  cmap=cmap2, alpha=alpha)
+    axes[1].xaxis.set_visible(False)
+    axes[1].yaxis.set_visible(False)
+    divider = make_axes_locatable(axes[1])
+    cax = divider.append_axes("right", size="20%", pad=0.05)
+    plt.colorbar(im_score, cax=cax, location='right')
+
+
+    # plot original image
+    axes[2].set_title('Selected Pixel - Active Round: '+str(round_number))
+    axes[2].imshow(img_np, cmap=cmap1)
+    axes[2].imshow(active_mask_np, cmap='autumn', alpha=alpha)
+    axes[2].xaxis.set_visible(False)
+    axes[2].yaxis.set_visible(False)
+
+
+    # make directory if it doesn't exist
+    if not os.path.exists(cfg.OUTPUT_DIR + '/viz'):
+        os.makedirs(cfg.OUTPUT_DIR + '/viz')
+    name = name.rsplit('/', 1)[-1].rsplit('_', 1)[0]
+    file_name = cfg.OUTPUT_DIR + '/viz/' + name +'_round'+str(round_number)+'.png'
+
+
+
+    plt.suptitle(name)
+    plt.savefig(file_name)
+    plt.close()

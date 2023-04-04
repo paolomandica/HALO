@@ -104,32 +104,8 @@ def transform_color(pred):
     return label_copy.copy()
 
 
-def visualize_score(image, output, decoder_out, gt_segm_map, name, cfg, cmap1='gray', cmap2='viridis', alpha=0.7):
 
-    floating_region_score = FloatingRegionScore(in_channels=cfg.MODEL.NUM_CLASSES, size=2 * cfg.ACTIVE.RADIUS_K + 1, cfg=cfg).cuda()
-    # per_region_pixels = (2 * cfg.ACTIVE.RADIUS_K + 1) ** 2
-    # active_radius = cfg.ACTIVE.RADIUS_K
-    # mask_radius = cfg.ACTIVE.RADIUS_K * 2
-    # active_ratio = cfg.ACTIVE.RATIO / len(cfg.ACTIVE.SELECT_ITER)
-
-    if cfg.ACTIVE.UNCERTAINTY == 'entropy':
-        score, purity, uncertainty = floating_region_score(output)
-    elif cfg.ACTIVE.UNCERTAINTY == 'hyperbolic' or cfg.ACTIVE.UNCERTAINTY == 'certainty':
-        score, purity, uncertainty = floating_region_score(output, decoder_out=decoder_out)
-    elif cfg.ACTIVE.UNCERTAINTY == 'none' and cfg.ACTIVE.PURITY == 'ripu':
-        if cfg.MODEL.HYPER:
-            score, purity, uncertainty = floating_region_score(output, decoder_out=decoder_out)
-        else:
-            score, purity, uncertainty = floating_region_score(output)
-
-    img_np = image.cpu().numpy().transpose(1, 2, 0)
-    img_np = (img_np * CITYSCAPES_STD + CITYSCAPES_MEAN).astype(np.uint8)
-    # img_np = image.cpu().numpy().astype(np.uint8)  #  Is it denormalized?
-
-    score_np = score.cpu().numpy()
-    uncertainty_np = uncertainty.cpu().numpy()
-    purity_np = purity.cpu().numpy()
-
+def visualization_plots(img_np, score_np, uncertainty_np, purity_np, output, cmap1='gray', cmap2='viridis', alpha=0.7):
 
     fig, axes = plt.subplots(2, 3, constrained_layout = True, figsize=(10, 10))
 
@@ -171,9 +147,6 @@ def visualize_score(image, output, decoder_out, gt_segm_map, name, cfg, cmap1='g
         os.makedirs(cfg.OUTPUT_DIR + '/viz')
     name = name.rsplit('/', 1)[-1].rsplit('_', 1)[0]
     file_name = cfg.OUTPUT_DIR + '/viz/' + name + '.png'
-
-
-
 
 
 
@@ -219,9 +192,34 @@ def visualize_score(image, output, decoder_out, gt_segm_map, name, cfg, cmap1='g
     plt.savefig(file_name)
     plt.close()
 
-    # mask = get_color_pallete(pred_segm_map, "city")
-    # if mask.mode == 'P':
-    #     mask = mask.convert('RGB')
+
+def visualize_score(image, output, decoder_out, gt_segm_map, name, cfg, cmap1='gray', cmap2='viridis', alpha=0.7):
+
+    floating_region_score = FloatingRegionScore(in_channels=cfg.MODEL.NUM_CLASSES, size=2 * cfg.ACTIVE.RADIUS_K + 1, cfg=cfg).cuda()
+    # per_region_pixels = (2 * cfg.ACTIVE.RADIUS_K + 1) ** 2
+    # active_radius = cfg.ACTIVE.RADIUS_K
+    # mask_radius = cfg.ACTIVE.RADIUS_K * 2
+    # active_ratio = cfg.ACTIVE.RATIO / len(cfg.ACTIVE.SELECT_ITER)
+
+    if cfg.ACTIVE.UNCERTAINTY == 'entropy':
+        score, purity, uncertainty = floating_region_score(output)
+    elif cfg.ACTIVE.UNCERTAINTY == 'hyperbolic' or cfg.ACTIVE.UNCERTAINTY == 'certainty':
+        score, purity, uncertainty = floating_region_score(output, decoder_out=decoder_out)
+    elif cfg.ACTIVE.UNCERTAINTY == 'none' and cfg.ACTIVE.PURITY == 'ripu':
+        if cfg.MODEL.HYPER:
+            score, purity, uncertainty = floating_region_score(output, decoder_out=decoder_out)
+        else:
+            score, purity, uncertainty = floating_region_score(output)
+
+    img_np = image.cpu().numpy().transpose(1, 2, 0)
+    img_np = (img_np * CITYSCAPES_STD + CITYSCAPES_MEAN).astype(np.uint8)
+
+    score_np = score.cpu().numpy()
+    uncertainty_np = uncertainty.cpu().numpy()
+    purity_np = purity.cpu().numpy()
+
+    visualization_plots(img_np, score_np, uncertainty_np, purity_np, output, cmap1='gray', cmap2='viridis', alpha=0.7)
+
 
 
 
@@ -239,10 +237,10 @@ def test(cfg):
 
     if cfg.resume:
         logger.info("Loading checkpoint from {}".format(cfg.resume))
-        load_checkpoint(feature_extractor, cfg.resume, model='feature_extractor')
-        load_checkpoint(classifier, cfg.resume, model='classifier')
-        # load_checkpoint_ripu(feature_extractor, cfg.resume, model='feature_extractor')
-        # load_checkpoint_ripu(classifier, cfg.resume, model='classifier')
+        # load_checkpoint(feature_extractor, cfg.resume, module='feature_extractor')
+        # load_checkpoint(classifier, cfg.resume, module='classifier')
+        load_checkpoint_ripu(feature_extractor, cfg.resume, module='feature_extractor')
+        load_checkpoint_ripu(classifier, cfg.resume, module='classifier')
 
     feature_extractor.eval()
     classifier.eval()
