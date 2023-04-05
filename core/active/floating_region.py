@@ -35,7 +35,7 @@ class FloatingRegionScore(nn.Module):
         self.entropy_conv.weight = weight
         self.entropy_conv.requires_grad_(False)
 
-    def forward(self, logit, decoder_out=None):
+    def forward(self, logit, decoder_out=None, unc_type=None, pur_type=None, normalize=False):
         """
         return:
             score, purity, entropy
@@ -43,7 +43,19 @@ class FloatingRegionScore(nn.Module):
         logit = logit.squeeze(dim=0)  # [19, h ,w]
         p = torch.softmax(logit, dim=0)  # [19, h, w]
 
-        if self.cfg.ACTIVE.UNCERTAINTY == 'entropy':
+        if unc_type == 'entropy':
+            pixel_entropy = torch.sum(-p * torch.log(p + 1e-6), dim=0).unsqueeze(dim=0).unsqueeze(dim=0) / math.log(19)  # [1, 1, h, w]
+            region_sum_uncert = self.entropy_conv(pixel_entropy)  # [1, 1, h, w]
+            # region_sum_uncert = pixel_entropy
+        elif unc_type == 'hyperbolic':
+            hyper_uncert = 1 - decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
+            region_sum_uncert = self.entropy_conv(hyper_uncert)
+            # region_sum_uncert = hyper_uncert
+        elif unc_type == 'certainty':
+            hyper_cert = decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
+            region_sum_uncert = self.entropy_conv(hyper_cert)
+            # region_sum_uncert = hyper_cert
+        elif self.cfg.ACTIVE.UNCERTAINTY == 'entropy':
             pixel_entropy = torch.sum(-p * torch.log(p + 1e-6), dim=0).unsqueeze(dim=0).unsqueeze(dim=0) / math.log(19)  # [1, 1, h, w]
             region_sum_uncert = self.entropy_conv(pixel_entropy)  # [1, 1, h, w]
         elif self.cfg.ACTIVE.UNCERTAINTY == 'hyperbolic':
@@ -62,13 +74,20 @@ class FloatingRegionScore(nn.Module):
         summary = self.purity_conv(one_hot)  # [1, 19, h, w]
         count = torch.sum(summary, dim=1, keepdim=True)  # [1, 1, h, w]
         
-        if self.cfg.ACTIVE.PURITY == 'ripu':
+        if pur_type == 'ripu':
+            dist = summary / count
+            region_impurity = torch.sum(-dist * torch.log(dist + 1e-6), dim=1, keepdim=True) / math.log(19)  # [1, 1, h, w]
+        elif self.cfg.ACTIVE.PURITY == 'ripu':
             dist = summary / count  # [1, 19, h, w]
             region_impurity = torch.sum(-dist * torch.log(dist + 1e-6), dim=1, keepdim=True) / math.log(19)  # [1, 1, h, w]
         elif self.cfg.ACTIVE.PURITY == 'none':
             region_impurity = torch.zeros((1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32).cuda()
 
         prediction_uncertainty = region_sum_uncert / count  # [1, 1, h, w]
+
+        if normalize:
+            prediction_uncertainty = (prediction_uncertainty - prediction_uncertainty.min().item()) / (prediction_uncertainty.max().item() - prediction_uncertainty.min().item())
+            region_impurity = (region_impurity - region_impurity.min().item()) / (region_impurity.max().item() - region_impurity.min().item())
 
         score = region_impurity * prediction_uncertainty
         return score.squeeze(dim=0).squeeze(dim=0), region_impurity.squeeze(dim=0).squeeze(

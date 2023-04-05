@@ -38,8 +38,10 @@ WANDB:
   ENTITY: 'pinlab-sapienza'
 TEST:
   VIZ_SCORE: False
+  VIZ_WRONG: False
 DEBUG: 0
 TEST:
   BATCH_SIZE: 1
 resume: 'results/pretrain_gtav/hyper_v2_256/model_iter020000.pth'
 OUTPUT_DIR: 'results/source_free/dlv2_RA_hyper_ripu_gpus_4_lr_1e-2'
+DEBUG: 0
