@@ -86,15 +86,19 @@ class BaseLearner(pl.LightningModule):
         output = torch.argmax(pred, dim=1)
         intersection, union, target = self.intersectionAndUnionGPU(
             output, y, self.cfg.MODEL.NUM_CLASSES, self.cfg.INPUT.IGNORE_LABEL)
+        
+        intersection = np.expand_dims(intersection, axis=0)
+        union = np.expand_dims(union, axis=0)
+        target = np.expand_dims(target, axis=0)
 
         if self.intersections.size == 0:
             self.intersections = intersection
             self.unions = union
             self.targets = target
         else:
-            self.intersections = np.stack((self.intersections, intersection), axis=0)
-            self.unions = np.stack((self.unions, union), axis=0)
-            self.targets = np.stack((self.targets, target), axis=0)
+            self.intersections = np.concatenate((self.intersections, intersection), axis=0)
+            self.unions = np.concatenate((self.unions, union), axis=0)
+            self.targets = np.concatenate((self.targets, target), axis=0)
 
     def on_validation_epoch_end(self):
         # gather all the metrics across all the processes
@@ -326,6 +330,5 @@ class ActiveLearner(BaseLearner):
             shuffle=False,
             num_workers=4,
             pin_memory=True,
-            drop_last=False,
-            persistent_workers=True,)
+            drop_last=False,)
         return test_loader
