@@ -45,27 +45,35 @@ def main():
 
     learner = TrainLearner(cfg)
 
-    checkpoint_callback = ModelCheckpoint(
+    checkcall_1 = ModelCheckpoint(
         save_top_k=1,
         monitor="mIoU",
         mode="max",
         dirpath=cfg.OUTPUT_DIR,
-        filename="model_{epoch:02d}_{mIoU:.2f}",
+        filename="model_{global_step}_{mIoU:.2f}",
+    )
+
+    checkcall_2 = ModelCheckpoint(
+        save_top_k=1,
+        monitor="global_step",
+        mode="max",
+        dirpath=cfg.OUTPUT_DIR,
+        filename="model_{global_step}",
     )
 
     # init trainer
     trainer = pl.Trainer(
         accelerator='gpu',
         devices=cfg.SOLVER.GPUS,
-        max_epochs=1000,
-        max_steps=cfg.SOLVER.STOP_ITER,
-        log_every_n_steps=20,
+        max_epochs=1,
+        max_steps=cfg.SOLVER.MAX_ITER,
+        log_every_n_steps=50,
         accumulate_grad_batches=1,
         sync_batchnorm=True,
         strategy="ddp",
         num_nodes=1,
         logger=wandb_logger,
-        callbacks=[checkpoint_callback],
+        callbacks=[checkcall_1, checkcall_2],
         check_val_every_n_epoch=1,
         val_check_interval=1000,
         precision=32,

@@ -1,5 +1,6 @@
 import setproctitle
 import warnings
+import torch
 from core.datasets.dataset_path_catalog import DatasetCatalog
 from core.utils.misc import mkdir, parse_args
 from core.configs import cfg
@@ -9,6 +10,11 @@ from pytorch_lightning.loggers.wandb import WandbLogger
 import pytorch_lightning as pl
 
 warnings.filterwarnings('ignore')
+
+torch.backends.cudnn.benchmark = True
+# torch.use_deterministic_algorithms(True)
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32 = True
 
 
 def main():
@@ -31,12 +37,20 @@ def main():
 
     learner = ActiveLearner(cfg)
 
-    checkpoint_callback = ModelCheckpoint(
+    checkcall_1 = ModelCheckpoint(
         save_top_k=1,
         monitor="mIoU",
         mode="max",
         dirpath=cfg.OUTPUT_DIR,
-        filename="model_{global_step:02d}_{mIoU:.2f}",
+        filename="model_{global_step}_{mIoU:.2f}",
+    )
+
+    checkcall_2 = ModelCheckpoint(
+        save_top_k=1,
+        monitor="global_step",
+        mode="max",
+        dirpath=cfg.OUTPUT_DIR,
+        filename="model_{global_step}",
     )
 
     # init trainer
@@ -51,7 +65,7 @@ def main():
         strategy="ddp",
         num_nodes=1,
         logger=wandb_logger,
-        callbacks=[checkpoint_callback],
+        callbacks=[checkcall_1, checkcall_2],
         check_val_every_n_epoch=1,
         val_check_interval=400,
         precision=32,
