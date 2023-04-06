@@ -32,10 +32,14 @@ class BaseLearner(pl.LightningModule):
         # resume checkpoint if needed
         if cfg.resume:
             print("Loading checkpoint from {}".format(cfg.resume))
-            # load_checkpoint(self.feature_extractor, cfg.resume, module='feature_extractor')
-            # load_checkpoint(self.classifier, cfg.resume, module='classifier')
-            load_checkpoint_ripu(self.feature_extractor, cfg.resume, module='feature_extractor')
-            load_checkpoint_ripu(self.classifier, cfg.resume, module='classifier')
+            if 'step' in cfg.resume:
+                load_checkpoint(self.feature_extractor, cfg.resume, module='feature_extractor')
+                load_checkpoint(self.classifier, cfg.resume, module='classifier')
+            elif 'iter' in cfg.resume:
+                load_checkpoint_ripu(self.feature_extractor, cfg.resume, module='feature_extractor')
+                load_checkpoint_ripu(self.classifier, cfg.resume, module='classifier')
+            else:
+                raise NotImplementedError('Unknown checkpoint type')
 
         # create criterion
         self.criterion = nn.CrossEntropyLoss(ignore_index=255)
@@ -80,10 +84,11 @@ class BaseLearner(pl.LightningModule):
         return area_intersection.cpu().numpy(), area_union.cpu().numpy(), area_target.cpu().numpy()
 
     def validation_step(self, batch, batch_idx):
-        x, y, _ = batch['img'], batch['label'], batch['name']
+        x, y, name = batch['img'], batch['label'], batch['name']
+        name = name[0]
         pred = self.inference(x, y, flip=True)
 
-        output = torch.argmax(pred, dim=1)
+        output = pred.max(1)[1]
         intersection, union, target = self.intersectionAndUnionGPU(
             output, y, self.cfg.MODEL.NUM_CLASSES, self.cfg.INPUT.IGNORE_LABEL)
         
@@ -171,6 +176,7 @@ class TrainLearner(BaseLearner):
         self.log('loss', loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
         lr = self.trainer.optimizers[0].param_groups[0]['lr']
         self.log('lr', lr, on_step=True, on_epoch=False)
+        self.log('global_step', self.global_step, on_step=True, on_epoch=False)
 
         # manual backward pass
         self.manual_backward(loss)
@@ -181,16 +187,16 @@ class TrainLearner(BaseLearner):
 
         return loss
 
-    def configure_optimizers(self):
-        if self.hyper:
-            optim = RiemannianSGD
-        else:
-            optim = torch.optim.SGD
-        optimizer = optim(self.parameters(), lr=self.cfg.SOLVER.BASE_LR,
-                          momentum=self.cfg.SOLVER.MOMENTUM, weight_decay=self.cfg.SOLVER.WEIGHT_DECAY)
-        scheduler = torch.optim.lr_scheduler.PolynomialLR(
-            optimizer, self.cfg.SOLVER.MAX_ITER, power=self.cfg.SOLVER.LR_POWER)
-        return [optimizer], [scheduler]
+    # def configure_optimizers(self):
+    #     if self.hyper:
+    #         optim = RiemannianSGD
+    #     else:
+    #         optim = torch.optim.SGD
+    #     optimizer = optim(self.parameters(), lr=self.cfg.SOLVER.BASE_LR,
+    #                       momentum=self.cfg.SOLVER.MOMENTUM, weight_decay=self.cfg.SOLVER.WEIGHT_DECAY)
+    #     scheduler = torch.optim.lr_scheduler.PolynomialLR(
+    #         optimizer, self.cfg.SOLVER.MAX_ITER, power=self.cfg.SOLVER.LR_POWER)
+    #     return [optimizer], [scheduler]
 
     def train_dataloader(self):
         train_set = build_dataset(self.cfg, mode='train', is_source=True)
@@ -268,6 +274,7 @@ class ActiveLearner(BaseLearner):
                                classifier=self.classifier,
                                tgt_epoch_loader=self.active_loader,
                                round_number=self.active_round)
+            self.active_round += 1
         return batch, batch_idx
 
     def training_step(self, batch, batch_idx):
@@ -302,6 +309,7 @@ class ActiveLearner(BaseLearner):
 
         lr = self.trainer.optimizers[0].param_groups[0]['lr']
         self.log('lr', lr, on_step=True, on_epoch=False)
+        self.log('global_step', self.global_step, on_step=True, on_epoch=False)
 
         # manual backward pass
         self.manual_backward(loss)
@@ -311,7 +319,7 @@ class ActiveLearner(BaseLearner):
             sched.step()
 
     def train_dataloader(self):
-        train_set = build_dataset(self.cfg, mode='train', is_source=False, epochwise=False)
+        train_set = build_dataset(self.cfg, mode='train', is_source=False)
         train_loader = DataLoader(
             dataset=train_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
@@ -323,12 +331,102 @@ class ActiveLearner(BaseLearner):
         return train_loader
 
     def val_dataloader(self):
-        test_set = build_dataset(self.cfg, mode='test', is_source=False, epochwise=True)
-        test_loader = DataLoader(
-            dataset=test_set,
+        val_set = build_dataset(self.cfg, mode='test', is_source=False)
+        val_loader = DataLoader(
+            dataset=val_set,
             batch_size=self.cfg.TEST.BATCH_SIZE,
             shuffle=False,
             num_workers=4,
             pin_memory=True,
             drop_last=False,)
+        return val_loader
+
+
+class Test(BaseLearner):
+    def __init__(self, cfg):
+        super().__init__(cfg)
+
+        self.intersection_meter = AverageMeter()
+        self.union_meter = AverageMeter()
+        self.target_meter = AverageMeter()
+
+    def test_step(self, batch, batch_idx):
+        x, y, name = batch['img'], batch['label'], batch['name']
+        name = name[0]
+        pred = self.inference(x, y, flip=True)
+
+        output = pred.max(1)[1]
+        intersection, union, target = self.intersectionAndUnionGPU(
+            output, y, self.cfg.MODEL.NUM_CLASSES, self.cfg.INPUT.IGNORE_LABEL)
+
+        self.intersection_meter.update(intersection)
+        self.union_meter.update(union)
+        self.target_meter.update(target)
+
+        intersection = np.expand_dims(intersection, axis=0)
+        union = np.expand_dims(union, axis=0)
+        target = np.expand_dims(target, axis=0)
+
+        if self.intersections.size == 0:
+            self.intersections = intersection
+            self.unions = union
+            self.targets = target
+        else:
+            self.intersections = np.concatenate((self.intersections, intersection), axis=0)
+            self.unions = np.concatenate((self.unions, union), axis=0)
+            self.targets = np.concatenate((self.targets, target), axis=0)
+
+    def on_test_epoch_end(self):
+
+        # calculate the final mean iou and accuracy
+        intersections = self.intersections.sum(axis=0)
+        unions = self.unions.sum(axis=0)
+        targets = self.targets.sum(axis=0)
+
+        iou_class = intersections / (unions + 1e-10)
+        accuracy_class = intersections / (targets + 1e-10)
+
+        mIoU = round(iou_class.mean() * 100, 2)
+        mAcc = round(accuracy_class.mean() * 100, 2)
+        aAcc = round(intersections.sum() / (targets.sum() + 1e-10) * 100, 2)
+
+        # print metrics table style
+        print()
+        print('mIoU: {:.2f}'.format(mIoU))
+        print('mAcc: {:.2f}'.format(mAcc))
+        print('aAcc: {:.2f}\n'.format(aAcc))
+
+        # log metrics
+        self.log('mIoU', mIoU, on_step=False, on_epoch=True, sync_dist=True, prog_bar=True)
+        self.log('mAcc', mAcc, on_step=False, on_epoch=True, sync_dist=True, prog_bar=True)
+        self.log('aAcc', aAcc, on_step=False, on_epoch=True, sync_dist=True, prog_bar=True)
+
+        # average meters metrics
+        iou_class_2 = self.intersection_meter.sum / (self.union_meter.sum + 1e-10)
+        accuracy_class_2 = self.intersection_meter.sum / (self.target_meter.sum + 1e-10)
+        mIoU_2 = round(np.mean(iou_class_2) * 100, 2)
+        mAcc_2 = round(np.mean(accuracy_class_2) * 100, 2)
+        aAcc_2 = round(sum(self.intersection_meter.sum) / (sum(self.target_meter.sum) + 1e-10) * 100, 2)
+
+        # print metrics table style
+        print()
+        print('mIoU: {:.2f}'.format(mIoU_2))
+        print('mAcc: {:.2f}'.format(mAcc_2))
+        print('aAcc: {:.2f}\n'.format(aAcc_2))
+
+        # log metrics
+        self.log('mIoU_2', mIoU_2, on_step=False, on_epoch=True, sync_dist=True, prog_bar=True)
+        self.log('mAcc_2', mAcc_2, on_step=False, on_epoch=True, sync_dist=True, prog_bar=True)
+        self.log('aAcc_2', aAcc_2, on_step=False, on_epoch=True, sync_dist=True, prog_bar=True)
+
+    def test_dataloader(self):
+        test_set = build_dataset(self.cfg, mode='test', is_source=False)
+        test_loader = DataLoader(
+            dataset=test_set,
+            batch_size=1,
+            shuffle=False,
+            num_workers=2,
+            pin_memory=True,
+            drop_last=False,)
         return test_loader
+    
