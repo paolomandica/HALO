@@ -3,7 +3,7 @@ MODEL:
   WEIGHTS: 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth'
   FREEZE_BN: True
   HYPER: True
-  REDUCED_CHANNELS: 64
+  REDUCED_CHANNELS: 2
 DATASETS:
   SOURCE_TRAIN: "gtav_train"
   TEST: "cityscapes_val"
@@ -11,15 +11,15 @@ INPUT:
   SOURCE_INPUT_SIZE_TRAIN: (1280, 720)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
-  GPUS: [0,1]
+  GPUS: [0,1,2,3]
   BATCH_SIZE: 2
   BASE_LR: 1e-3
   MAX_ITER: 40000
   STOP_ITER: 40000
 WANDB:
   ENABLE: True
-  NAME: 'deeplabv3plus_r101_hyper_ch_64_lt'
+  NAME: 'dlv3plus_hyper_ch_2'
   GROUP: 'gtav_pretraining'
   PROJECT: 'active_domain_adapt'
   ENTITY: 'pinlab-sapienza'
-OUTPUT_DIR: 'pretrain_gtav/deeplabv3plus_r101_hyper_ch_64_lt'
+OUTPUT_DIR: 'pretrain_gtav/dlv3plus_hyper_ch_2'
