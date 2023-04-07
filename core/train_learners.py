@@ -153,9 +153,9 @@ class BaseLearner(pl.LightningModule):
         optimizer_cls = optim(self.classifier.parameters(), lr=self.cfg.SOLVER.BASE_LR * 10,
                               momentum=self.cfg.SOLVER.MOMENTUM, weight_decay=self.cfg.SOLVER.WEIGHT_DECAY)
         scheduler_fea = torch.optim.lr_scheduler.PolynomialLR(
-            optimizer_fea, self.cfg.SOLVER.MAX_ITER, power=self.cfg.SOLVER.LR_POWER)
+            optimizer_fea, self.cfg.SOLVER.NUM_ITER, power=self.cfg.SOLVER.LR_POWER)
         scheduler_cls = torch.optim.lr_scheduler.PolynomialLR(
-            optimizer_cls, self.cfg.SOLVER.MAX_ITER, power=self.cfg.SOLVER.LR_POWER)
+            optimizer_cls, self.cfg.SOLVER.NUM_ITER, power=self.cfg.SOLVER.LR_POWER)
         return [optimizer_fea, optimizer_cls], [scheduler_fea, scheduler_cls]
 
 
@@ -196,7 +196,7 @@ class SourceLearner(BaseLearner):
     #     optimizer = optim(self.parameters(), lr=self.cfg.SOLVER.BASE_LR,
     #                       momentum=self.cfg.SOLVER.MOMENTUM, weight_decay=self.cfg.SOLVER.WEIGHT_DECAY)
     #     scheduler = torch.optim.lr_scheduler.PolynomialLR(
-    #         optimizer, self.cfg.SOLVER.MAX_ITER, power=self.cfg.SOLVER.LR_POWER)
+    #         optimizer, self.cfg.SOLVER.NUM_ITER, power=self.cfg.SOLVER.LR_POWER)
     #     return [optimizer], [scheduler]
 
     def train_dataloader(self):
@@ -253,7 +253,7 @@ class SourceFreeLearner(BaseLearner):
         self.active_round = 1
 
     def compute_active_iters(self):
-        denom = self.cfg.SOLVER.MAX_ITER * self.cfg.SOLVER.BATCH_SIZE * len(self.cfg.SOLVER.GPUS)
+        denom = self.cfg.SOLVER.NUM_ITER * self.cfg.SOLVER.BATCH_SIZE * len(self.cfg.SOLVER.GPUS)
         self.active_iters = [int(x*self.data_len/denom) for x in self.cfg.ACTIVE.SELECT_ITER]
         print("\nActive learning at iters: {}\n".format(self.active_iters))
         self.active_iters = [x * self.cfg.SOLVER.BATCH_SIZE for x in self.active_iters]

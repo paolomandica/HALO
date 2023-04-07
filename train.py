@@ -78,7 +78,7 @@ def main():
         accelerator='gpu',
         devices=cfg.SOLVER.GPUS,
         max_epochs=1,
-        max_steps=cfg.SOLVER.MAX_ITER,
+        max_steps=cfg.SOLVER.NUM_ITER,
         log_every_n_steps=50,
         accumulate_grad_batches=1,
         sync_batchnorm=True,
