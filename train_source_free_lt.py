@@ -4,7 +4,7 @@ import torch
 from core.datasets.dataset_path_catalog import DatasetCatalog
 from core.utils.misc import mkdir, parse_args
 from core.configs import cfg
-from core.train_learners import ActiveLearner
+from core.train_learners import SourceFreeLearner
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers.wandb import WandbLogger
 import pytorch_lightning as pl
@@ -31,11 +31,11 @@ def main():
     if cfg.WANDB.ENABLE:
         wandb_logger = WandbLogger(project=cfg.WANDB.PROJECT, name=cfg.WANDB.NAME,
                                    entity=cfg.WANDB.ENTITY, group=cfg.WANDB.GROUP,
-                                   config=cfg, save_dir='..')
+                                   config=cfg, save_dir='.')
 
     pl.seed_everything(cfg.SEED, workers=True)
 
-    learner = ActiveLearner(cfg)
+    learner = SourceFreeLearner(cfg)
 
     checkcall_1 = ModelCheckpoint(
         save_top_k=1,

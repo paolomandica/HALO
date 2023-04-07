@@ -94,3 +94,4 @@ _C.resume = ""
 _C.PREPARE_DIR = ""
 _C.SEED = -1
 _C.DEBUG = 0
+_C.PROTOCOL = "source_free"

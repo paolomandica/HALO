@@ -1,19 +1,13 @@
-import warnings
+from pathlib import Path
 import setproctitle
+import warnings
+import torch
 from core.utils.misc import mkdir, parse_args
 from core.configs import cfg
-from core.train_learners import SourceLearner
+from core.train_learners import SourceFreeLearner, SourceLearner, SourceTargetLearner
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers.wandb import WandbLogger
-import os
-import sys
 import pytorch_lightning as pl
-import torch
-
-cur_path = os.path.abspath(os.path.dirname(__file__))
-root_path = os.path.split(cur_path)[0]
-sys.path.append(root_path)
-
 
 warnings.filterwarnings('ignore')
 
@@ -21,6 +15,19 @@ torch.backends.cudnn.benchmark = True
 # torch.use_deterministic_algorithms(True)
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
+
+
+class PeriodicCheckpoint(ModelCheckpoint):
+    def __init__(self, dirpath: str,  every: int):
+        super().__init__()
+        self.dirpath = dirpath
+        self.every = every
+
+    def on_train_batch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule, *args, **kwargs):
+        if (pl_module.global_step + 1) % self.every == 0:
+            assert self.dirpath is not None
+            current = Path(self.dirpath) / f"model_step_{pl_module.global_step}.ckpt"
+            trainer.save_checkpoint(current)
 
 
 def main():
@@ -42,7 +49,16 @@ def main():
 
     pl.seed_everything(cfg.SEED, workers=True)
 
-    learner = SourceLearner(cfg)
+    # init learner
+    print(f'\n\n>>>>>>>>>>>>>> PROTOCOL: {cfg.PROTOCOL} <<<<<<<<<<<<<<\n\n')
+    if cfg.PROTOCOL == 'source':
+        learner = SourceLearner(cfg)
+    elif cfg.PROTOCOL == 'source_free':
+        learner = SourceFreeLearner(cfg)
+    elif cfg.PROTOCOL == 'source_target':
+        learner = SourceTargetLearner(cfg)
+    else:
+        raise NotImplementedError(f'Protocol {cfg.PROTOCOL} is not implemented.')
 
     checkcall_1 = ModelCheckpoint(
         save_top_k=1,
@@ -52,12 +68,9 @@ def main():
         filename="model_{global_step}_{mIoU:.2f}",
     )
 
-    checkcall_2 = ModelCheckpoint(
-        save_top_k=1,
-        monitor="global_step",
-        mode="max",
+    checkcall_2 = PeriodicCheckpoint(
         dirpath=cfg.OUTPUT_DIR,
-        filename="model_{global_step}",
+        every=cfg.SOLVER.CHECKPOINT_PERIOD,
     )
 
     # init trainer
@@ -74,7 +87,7 @@ def main():
         logger=wandb_logger,
         callbacks=[checkcall_1, checkcall_2],
         check_val_every_n_epoch=1,
-        val_check_interval=1000,
+        val_check_interval=400,
         precision=32,
         detect_anomaly=True)
 
