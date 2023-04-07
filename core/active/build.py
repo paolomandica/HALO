@@ -154,50 +154,55 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                 active = active_indicator[i]
                 selected = selected_indicator[i]
 
-                output = tgt_out[i:i + 1, :, :, :]
-                output = F.interpolate(output, size=size, mode='bilinear', align_corners=True)
+                if cfg.ACTIVE.RATIO == 1:
+                    active_mask = ground_truth
+                    active = torch.ones_like(active_mask, dtype=torch.bool)
+                    selected = torch.ones_like(active_mask, dtype=torch.bool)
+                else:
+                    output = tgt_out[i:i + 1, :, :, :]
+                    output = F.interpolate(output, size=size, mode='bilinear', align_corners=True)
 
-                if cfg.ACTIVE.UNCERTAINTY == 'entropy':
-                    score, purity, uncertainty = floating_region_score(output)
-                elif cfg.ACTIVE.UNCERTAINTY == 'hyperbolic' or cfg.ACTIVE.UNCERTAINTY == 'certainty':
-                    decoder_out = decoder_out[i:i + 1, :, :, :]
-                    decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
-                    score, purity, uncertainty = floating_region_score(output, decoder_out=decoder_out)
-                elif cfg.ACTIVE.UNCERTAINTY == 'none' and cfg.ACTIVE.PURITY == 'ripu':
-                    if cfg.MODEL.HYPER:
+                    if cfg.ACTIVE.UNCERTAINTY == 'entropy':
+                        score, purity, uncertainty = floating_region_score(output, normalize=True)
+                    elif cfg.ACTIVE.UNCERTAINTY == 'hyperbolic' or cfg.ACTIVE.UNCERTAINTY == 'certainty':
                         decoder_out = decoder_out[i:i + 1, :, :, :]
                         decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
-                        score, purity, uncertainty = floating_region_score(output, decoder_out=decoder_out)
-                    else:
-                        score, purity, uncertainty = floating_region_score(output)
+                        score, purity, uncertainty = floating_region_score(output, decoder_out=decoder_out, normalize=True)
+                    elif cfg.ACTIVE.UNCERTAINTY == 'none' and cfg.ACTIVE.PURITY == 'ripu':
+                        if cfg.MODEL.HYPER:
+                            decoder_out = decoder_out[i:i + 1, :, :, :]
+                            decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
+                            score, purity, uncertainty = floating_region_score(output, decoder_out=decoder_out, normalize=True)
+                        else:
+                            score, purity, uncertainty = floating_region_score(output, normalize=True)
 
-                score[active] = -float('inf')
+                    score[active] = -float('inf')
 
-                active_regions = math.ceil(num_pixel_cur * active_ratio / per_region_pixels)
+                    active_regions = math.ceil(num_pixel_cur * active_ratio / per_region_pixels)
 
-                for pixel in range(active_regions):
-                    values, indices_h = torch.max(score, dim=0)
-                    _, indices_w = torch.max(values, dim=0)
-                    w = indices_w.item()
-                    h = indices_h[w].item()
+                    for pixel in range(active_regions):
+                        values, indices_h = torch.max(score, dim=0)
+                        _, indices_w = torch.max(values, dim=0)
+                        w = indices_w.item()
+                        h = indices_h[w].item()
 
-                    active_start_w = w - active_radius if w - active_radius >= 0 else 0
-                    active_start_h = h - active_radius if h - active_radius >= 0 else 0
-                    active_end_w = w + active_radius + 1
-                    active_end_h = h + active_radius + 1
+                        active_start_w = w - active_radius if w - active_radius >= 0 else 0
+                        active_start_h = h - active_radius if h - active_radius >= 0 else 0
+                        active_end_w = w + active_radius + 1
+                        active_end_h = h + active_radius + 1
 
-                    mask_start_w = w - mask_radius if w - mask_radius >= 0 else 0
-                    mask_start_h = h - mask_radius if h - mask_radius >= 0 else 0
-                    mask_end_w = w + mask_radius + 1
-                    mask_end_h = h + mask_radius + 1
+                        mask_start_w = w - mask_radius if w - mask_radius >= 0 else 0
+                        mask_start_h = h - mask_radius if h - mask_radius >= 0 else 0
+                        mask_end_w = w + mask_radius + 1
+                        mask_end_h = h + mask_radius + 1
 
-                    # mask out
-                    score[mask_start_h:mask_end_h, mask_start_w:mask_end_w] = -float('inf')
-                    active[mask_start_h:mask_end_h, mask_start_w:mask_end_w] = True
-                    selected[active_start_h:active_end_h, active_start_w:active_end_w] = True
-                    # active sampling
-                    active_mask[active_start_h:active_end_h, active_start_w:active_end_w] = \
-                        ground_truth[active_start_h:active_end_h, active_start_w:active_end_w]
+                        # mask out
+                        score[mask_start_h:mask_end_h, mask_start_w:mask_end_w] = -float('inf')
+                        active[mask_start_h:mask_end_h, mask_start_w:mask_end_w] = True
+                        selected[active_start_h:active_end_h, active_start_w:active_end_w] = True
+                        # active sampling
+                        active_mask[active_start_h:active_end_h, active_start_w:active_end_w] = \
+                            ground_truth[active_start_h:active_end_h, active_start_w:active_end_w]
 
                 active_mask_np = np.array(active_mask.cpu().numpy(), dtype=np.uint8)
                 active_mask_IMG = Image.fromarray(active_mask_np)
