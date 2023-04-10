@@ -276,6 +276,7 @@ class SourceFreeLearner(BaseLearner):
                                classifier=self.classifier,
                                tgt_epoch_loader=self.active_loader,
                                round_number=self.active_round)
+            self.log('active_round', self.active_round, on_step=True, on_epoch=False)
             self.active_round += 1
         return batch, batch_idx
 

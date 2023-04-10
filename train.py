@@ -92,7 +92,12 @@ def main():
         detect_anomaly=True)
 
     # start training
-    trainer.fit(learner)
+
+    if cfg.checkpoint:
+        print(f">>>>>>>>>>>> Resuming from checkpoint: {cfg.checkpoint} <<<<<<<<<<<<")
+        trainer.fit(learner, ckpt_path=cfg.checkpoint)
+    else:
+        trainer.fit(learner)
 
 
 if __name__ == '__main__':

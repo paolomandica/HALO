@@ -91,6 +91,7 @@ _C.TEST.VIZ_WRONG = False
 
 _C.OUTPUT_DIR = ""
 _C.resume = ""
+_C.checkpoint = ""
 _C.PREPARE_DIR = ""
 _C.SEED = -1
 _C.DEBUG = 0
