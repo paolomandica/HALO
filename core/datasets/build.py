@@ -34,7 +34,7 @@ def build_dataset(cfg, mode='train', is_source=True, epochwise=False, empty=Fals
     iters = None
     if mode == 'train' or mode == 'active':
         if not epochwise:
-            iters = cfg.SOLVER.MAX_ITER * cfg.SOLVER.BATCH_SIZE
+            iters = cfg.SOLVER.NUM_ITER * cfg.SOLVER.BATCH_SIZE
         if is_source:
             dataset = DatasetCatalog.get(cfg.DATASETS.SOURCE_TRAIN, mode, num_classes=cfg.MODEL.NUM_CLASSES,
                                          max_iters=iters, transform=transform, cfg=cfg, empty=empty)

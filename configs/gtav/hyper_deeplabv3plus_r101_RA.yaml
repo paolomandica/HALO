@@ -1,9 +1,9 @@
 MODEL:
-  NAME: "deeplabv2_resnet101"
+  NAME: "deeplabv3plus_resnet101"
   WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
   FREEZE_BN: True
   HYPER: True
-  REDUCED_CHANNELS: 10      # 256 or 10
+  REDUCED_CHANNELS: 64      # 256 or 10
 DATASETS:
   SOURCE_TRAIN: "gtav_train"
   TARGET_TRAIN: "cityscapes_train"
@@ -13,18 +13,15 @@ INPUT:
   TARGET_INPUT_SIZE_TRAIN: (1280, 640)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
-  GPUS: [4, 5, 6, 7]
-  # EPOCHS: 30
+  GPUS: [0,5,6,7]
   BASE_LR: 1e-3
-  NUM_ITER: 30000
-  STOP_ITER: 30000
-  CHECKPOINT_PERIOD: 1000
+  NUM_ITER: 60000
+  CHECKPOINT_PERIOD: 400
   BATCH_SIZE: 2
 ACTIVE:
   NAME: 'AL-RIPU'
   SETTING: 'RA'
-  SELECT_ITER: [0, 10001, 15001, 20001, 25001]
-  # SELECT_EPOCH: [0, 10, 15, 20, 25]
+  SELECT_ITER: [0, 15001, 30001, 40001, 50001]
   RATIO: 0.022
   RADIUS_K: 1  # smaller might be better
   UNCERTAINTY: 'entropy' # 'entropy' or 'hyperbolic' or 'certainty' or 'none'
@@ -33,15 +30,16 @@ ACTIVE:
 WANDB:
   ENABLE: True
   PROJECT: 'active_domain_adapt'
-  NAME: 'dlv2_RA_hyper_ripu_ch_10'
-  GROUP: 'source_free'
+  NAME: 'hyper_v3plus_RA_ripu_64_60k'
+  GROUP: 'source_target'
   ENTITY: 'pinlab-sapienza'
 TEST:
-  VIZ_SCORE: False
-  VIZ_WRONG: False
-DEBUG: 0
+  VIZ_SCORE: True
+  VIZ_WRONG: True
 TEST:
   BATCH_SIZE: 1
-resume: 'results/pretrain_gtav/hyper_v2_10/model_iter020000.pth'
-OUTPUT_DIR: 'results/source_free/dlv2_RA_hyper_ripu_ch_10'
+resume: 'results/pretrain_gtav/hyper_v3plus_64/model_iter020000.pth'
+# checkpoint: 'results/source_target/hyper_v3plus_RA_ripu_64/epoch=0-step=20000.ckpt'
+OUTPUT_DIR: 'results/source_target/hyper_v3plus_RA_ripu_64_60k'
 DEBUG: 0
+PROTOCOL: 'source_target'   # source | source_target | source_free

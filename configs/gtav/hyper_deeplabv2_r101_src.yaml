@@ -14,8 +14,8 @@ SOLVER:
   GPUS: [0,1,2,3]
   BATCH_SIZE: 2 # 4
   BASE_LR: 1e-3
-  MAX_ITER: 60000 # 31250
-  STOP_ITER: 60000 # 20000
+  NUM_ITER: 31250
+  STOP_ITER: 20000
 WANDB:
   ENABLE: True
   NAME: 'dlv2_hyper_fully_supervised'

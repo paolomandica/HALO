@@ -11,6 +11,7 @@ from geoopt.optim import RiemannianSGD
 
 from core.datasets import build_dataset
 from core.datasets.dataset_path_catalog import DatasetCatalog
+from core.loss.local_consistent_loss import LocalConsistentLoss
 from core.models import build_feature_extractor, build_classifier
 from core.utils.misc import AverageMeter, load_checkpoint, load_checkpoint_ripu
 from core.loss.negative_learning_loss import NegativeLearningLoss
@@ -152,13 +153,13 @@ class BaseLearner(pl.LightningModule):
         optimizer_cls = optim(self.classifier.parameters(), lr=self.cfg.SOLVER.BASE_LR * 10,
                               momentum=self.cfg.SOLVER.MOMENTUM, weight_decay=self.cfg.SOLVER.WEIGHT_DECAY)
         scheduler_fea = torch.optim.lr_scheduler.PolynomialLR(
-            optimizer_fea, self.cfg.SOLVER.MAX_ITER, power=self.cfg.SOLVER.LR_POWER)
+            optimizer_fea, self.cfg.SOLVER.NUM_ITER, power=self.cfg.SOLVER.LR_POWER)
         scheduler_cls = torch.optim.lr_scheduler.PolynomialLR(
-            optimizer_cls, self.cfg.SOLVER.MAX_ITER, power=self.cfg.SOLVER.LR_POWER)
+            optimizer_cls, self.cfg.SOLVER.NUM_ITER, power=self.cfg.SOLVER.LR_POWER)
         return [optimizer_fea, optimizer_cls], [scheduler_fea, scheduler_cls]
 
 
-class TrainLearner(BaseLearner):
+class SourceLearner(BaseLearner):
     def __init__(self, cfg):
         super().__init__(cfg)
 
@@ -195,7 +196,7 @@ class TrainLearner(BaseLearner):
     #     optimizer = optim(self.parameters(), lr=self.cfg.SOLVER.BASE_LR,
     #                       momentum=self.cfg.SOLVER.MOMENTUM, weight_decay=self.cfg.SOLVER.WEIGHT_DECAY)
     #     scheduler = torch.optim.lr_scheduler.PolynomialLR(
-    #         optimizer, self.cfg.SOLVER.MAX_ITER, power=self.cfg.SOLVER.LR_POWER)
+    #         optimizer, self.cfg.SOLVER.NUM_ITER, power=self.cfg.SOLVER.LR_POWER)
     #     return [optimizer], [scheduler]
 
     def train_dataloader(self):
@@ -223,7 +224,7 @@ class TrainLearner(BaseLearner):
         return test_loader
 
 
-class ActiveLearner(BaseLearner):
+class SourceFreeLearner(BaseLearner):
     def __init__(self, cfg):
         super().__init__(cfg)
 
@@ -250,14 +251,15 @@ class ActiveLearner(BaseLearner):
         self.negative_criterion = NegativeLearningLoss()
 
         self.active_round = 1
-        self.compute_active_iters()
 
     def compute_active_iters(self):
-        data_len = len(self.train_dataloader().dataset)
-        denom = self.cfg.SOLVER.MAX_ITER * self.cfg.SOLVER.BATCH_SIZE * len(self.cfg.SOLVER.GPUS)
-        self.active_iters = [int(x*data_len/denom) for x in self.cfg.ACTIVE.SELECT_ITER]
+        denom = self.cfg.SOLVER.NUM_ITER * self.cfg.SOLVER.BATCH_SIZE * len(self.cfg.SOLVER.GPUS)
+        self.active_iters = [int(x*self.data_len/denom) for x in self.cfg.ACTIVE.SELECT_ITER]
         print("\nActive learning at iters: {}\n".format(self.active_iters))
         self.active_iters = [x * self.cfg.SOLVER.BATCH_SIZE for x in self.active_iters]
+
+    def on_train_start(self):
+        self.compute_active_iters()
 
     def on_train_batch_start(self, batch, batch_idx):
         if self.trainer.is_global_zero and self.global_step in self.active_iters and not self.debug:
@@ -274,6 +276,7 @@ class ActiveLearner(BaseLearner):
                                classifier=self.classifier,
                                tgt_epoch_loader=self.active_loader,
                                round_number=self.active_round)
+            self.log('active_round', self.active_round, on_step=True, on_epoch=False)
             self.active_round += 1
         return batch, batch_idx
 
@@ -320,6 +323,7 @@ class ActiveLearner(BaseLearner):
 
     def train_dataloader(self):
         train_set = build_dataset(self.cfg, mode='train', is_source=False)
+        self.data_len = len(train_set)
         train_loader = DataLoader(
             dataset=train_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
@@ -340,6 +344,96 @@ class ActiveLearner(BaseLearner):
             pin_memory=True,
             drop_last=False,)
         return val_loader
+
+
+class SourceTargetLearner(SourceFreeLearner):
+    def __init__(self, cfg):
+        super().__init__(cfg)
+
+        self.local_consistent_loss = LocalConsistentLoss(cfg.MODEL.NUM_CLASSES, cfg.SOLVER.LCR_TYPE)
+
+    def training_step(self, batch, batch_idx):
+        optimizers = self.optimizers()
+        for opt in optimizers:
+            opt.zero_grad()
+
+        # source data
+        src_input, src_label = batch[0]['img'], batch[0]['label']
+        src_out = self.forward(src_input)
+        if self.hyper:
+            src_out = src_out[0]
+
+        # target data
+        # tgt_mask is active label, 255 means unlabeled data
+        tgt_input, tgt_mask = batch[1]['img'], batch[1]['mask']
+        tgt_out = self.forward(tgt_input)
+        if self.hyper:
+            tgt_out = tgt_out[0]
+
+        predict = torch.softmax(tgt_out, dim=1)
+        loss = torch.Tensor([0]).cuda()
+
+        # source supervision loss
+        loss_sup = self.criterion(src_out, src_label)
+        loss += loss_sup
+        self.log('loss_sup', loss_sup.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
+
+        # target active supervision loss
+        if torch.sum((tgt_mask != 255)) != 0:  # target has labeled pixels
+            loss_sup_tgt = self.criterion(tgt_out, tgt_mask)
+            loss += loss_sup_tgt
+            self.log('loss_sup_tgt', loss_sup_tgt.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
+
+        # source consistency regularization loss
+        if self.cfg.SOLVER.CONSISTENT_LOSS > 0:
+            consistency_loss = self.local_consistent_loss(src_out, src_label) * self.cfg.SOLVER.CONSISTENT_LOSS
+            loss += consistency_loss
+            self.log('consistency_loss', consistency_loss.item(), on_step=True,
+                     on_epoch=False, sync_dist=True, prog_bar=True)
+
+        # target negative pseudo loss
+        if self.cfg.SOLVER.NEGATIVE_LOSS > 0:
+            negative_loss = self.negative_criterion(predict) * self.cfg.SOLVER.NEGATIVE_LOSS
+            loss += negative_loss
+            self.log('negative_loss', negative_loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
+
+        self.log('loss', loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
+
+        lr = self.trainer.optimizers[0].param_groups[0]['lr']
+        self.log('lr', lr, on_step=True, on_epoch=False)
+        self.log('global_step', self.global_step, on_step=True, on_epoch=False)
+
+        # manual backward pass
+        self.manual_backward(loss)
+        for opt in optimizers:
+            opt.step()
+        for sched in self.lr_schedulers():
+            sched.step()
+
+    def train_dataloader(self):
+        source_set = build_dataset(self.cfg, mode='train', is_source=True)
+        target_set = build_dataset(self.cfg, mode='train', is_source=False)
+        self.data_len = len(source_set)
+        self.target_len = len(target_set)
+        print('source data length: ', self.data_len)
+        print('target data length: ', self.target_len)
+        source_loader = DataLoader(
+            dataset=source_set,
+            batch_size=self.cfg.SOLVER.BATCH_SIZE,
+            shuffle=True,
+            num_workers=4,
+            pin_memory=True,
+            drop_last=True,
+            persistent_workers=True,)
+        target_loader = DataLoader(
+            dataset=target_set,
+            batch_size=self.cfg.SOLVER.BATCH_SIZE,
+            shuffle=True,
+            num_workers=4,
+            pin_memory=True,
+            drop_last=True,
+            persistent_workers=True,)
+        return [source_loader, target_loader]
 
 
 class Test(BaseLearner):
