@@ -124,6 +124,13 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
     active_radius = cfg.ACTIVE.RADIUS_K
     mask_radius = cfg.ACTIVE.RADIUS_K * 2
     active_ratio = cfg.ACTIVE.RATIO / len(cfg.ACTIVE.SELECT_ITER)
+    uncertainty_type = cfg.ACTIVE.UNCERTAINTY
+    purity_type = cfg.ACTIVE.PURITY
+
+    if cfg.ACTIVE.MIXED and round_number < 3:
+        uncertainty_type = 'entropy'
+    elif cfg.ACTIVE.MIXED and round_number >= 3:
+        uncertainty_type = cfg.ACTIVE.UNCERTAINTY
 
     with torch.no_grad():
         idx = 0
@@ -142,6 +149,7 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
             tgt_feat = feature_extractor(tgt_input)
             if not cfg.MODEL.HYPER:
                 tgt_out = classifier(tgt_feat, size=tgt_size)
+                decoder_out = None
             else:
                 tgt_out, decoder_out = classifier(tgt_feat, size=tgt_size)
 
@@ -162,19 +170,12 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                     output = tgt_out[i:i + 1, :, :, :]
                     output = F.interpolate(output, size=size, mode='bilinear', align_corners=True)
 
-                    if cfg.ACTIVE.UNCERTAINTY == 'entropy':
-                        score, purity, uncertainty = floating_region_score(output, normalize=True)
-                    elif cfg.ACTIVE.UNCERTAINTY == 'hyperbolic' or cfg.ACTIVE.UNCERTAINTY == 'certainty':
+                    if uncertainty_type in ['certainty', 'hyperbolic'] or (uncertainty_type == 'none' and cfg.MODEL.HYPER):
                         decoder_out = decoder_out[i:i + 1, :, :, :]
                         decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
-                        score, purity, uncertainty = floating_region_score(output, decoder_out=decoder_out, normalize=True)
-                    elif cfg.ACTIVE.UNCERTAINTY == 'none' and cfg.ACTIVE.PURITY == 'ripu':
-                        if cfg.MODEL.HYPER:
-                            decoder_out = decoder_out[i:i + 1, :, :, :]
-                            decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
-                            score, purity, uncertainty = floating_region_score(output, decoder_out=decoder_out, normalize=True)
-                        else:
-                            score, purity, uncertainty = floating_region_score(output, normalize=True)
+
+                    score, purity, uncertainty = floating_region_score(
+                        output, decoder_out=decoder_out, normalize=True, unc_type=uncertainty_type, pur_type=purity_type)
 
                     score[active] = -float('inf')
 
