@@ -36,7 +36,7 @@ def main():
         monitor="mIoU",
         mode="max",
         dirpath=cfg.OUTPUT_DIR,
-        filename="model_{global_step:02d}_{mIoU:.2f}",
+        filename="model_{global_step}_{mIoU:.2f}",
     )
 
     # init trainer
