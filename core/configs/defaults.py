@@ -79,6 +79,7 @@ _C.ACTIVE.PIXELS = 40
 _C.ACTIVE.RADIUS_K = 1
 # selected pixel visualization
 _C.ACTIVE.VIZ_MASK = True
+_C.ACTIVE.MIXED = False
 
 
 # ---------------------------------------------------------------------------- #
