@@ -166,7 +166,7 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                     output = tgt_out[i:i + 1, :, :, :]
                     output = F.interpolate(output, size=size, mode='bilinear', align_corners=True)
 
-                    if uncertainty_type in ['certainty', 'hyperbolic'] or (uncertainty_type == 'none' and cfg.MODEL.HYPER):
+                    if uncertainty_type in ['certainty', 'hyperbolic'] or (uncertainty_type == 'none' and cfg.MODEL.HYPER) or (cfg.ACTIVE.ALPHA and cfg.MODEL.HYPER):
                         decoder_out = decoder_out[i:i + 1, :, :, :]
                         decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
 

@@ -45,8 +45,8 @@ def build_dataset(cfg, mode='train', is_source=True, epochwise=False, empty=Fals
         dataset = DatasetCatalog.get(cfg.DATASETS.TEST, 'val', num_classes=cfg.MODEL.NUM_CLASSES, max_iters=iters,
                                      transform=transform, cfg=cfg, empty=empty)
     elif mode == 'test':
-        dataset = DatasetCatalog.get(cfg.DATASETS.TEST, 'test',
+        dataset = DatasetCatalog.get(cfg.DATASETS.TEST, cfg.DATASETS.TEST.split('_')[-1],
                                      num_classes=cfg.MODEL.NUM_CLASSES, max_iters=iters, transform=transform, cfg=cfg,
-                                     empty=empty)  # mode previously was cfg.DATASETS.TEST.split('_')[-1]
+                                     empty=empty)  # mode previously was cfg.DATASETS.TEST.split('_')[-1] or change in 'test' to do infrence on the train dataset
 
     return dataset

@@ -67,11 +67,17 @@ class FloatingRegionScore(nn.Module):
         p = torch.softmax(logit, dim=0)  # [19, h, w]
 
         assert unc_type in ['entropy', 'hyperbolic', 'certainty', 'none'], "error: unc_type '{}' not implemented".format(unc_type)
-        region_uncertainty = self.compute_region_uncertainty(unc_type, logit, p, decoder_out)
+        if self.entropy_conv.weight.device != logit.device:
+            self.entropy_conv = self.entropy_conv.to(logit.device)
+            self.purity_conv = self.purity_conv.to(logit.device)
+        
         if alpha is not None:
             region_uncertainty_entropy = self.compute_region_uncertainty('entropy', logit, p, decoder_out)
             region_uncertainty_hyper = self.compute_region_uncertainty('hyperbolic', logit, p, decoder_out)
             region_uncertainty = (1-alpha) * region_uncertainty_entropy + alpha * region_uncertainty_hyper
+        else:
+            region_uncertainty = self.compute_region_uncertainty(unc_type, logit, p, decoder_out)
+
         if unc_type == 'none':
             region_sum_uncert = region_uncertainty
         else:
