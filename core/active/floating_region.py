@@ -1,4 +1,5 @@
 import math
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -47,9 +48,19 @@ class FloatingRegionScore(nn.Module):
             raise NotImplementedError("unc_type '{}' not implemented".format(unc_type))
         return region_uncertainty
 
-    def forward(self, logit, decoder_out=None, unc_type=None, pur_type=None, normalize=False):
+    def forward(self, logit: torch.Tensor, decoder_out: torch.Tensor = None, unc_type: str = None, pur_type: str = None, normalize: bool = False, alpha: float = None):
         """
-        return:
+        Compute regions score, impurity and uncertainty.
+
+        Args:
+            logit: an n-dimensional Tensor
+            decoder_out: an n-dimensional Tensor
+            unc_type: type of uncertainty to compute (entropy, hyperbolic, certainty, none)
+            pur_type: type of impurity to compute (ripu, none)
+            normalize: normalize the impurity and uncertainty
+            alpha: weight of hyperbolic uncertainty mixed with entropy uncertainty
+        
+        Return:
             score, purity, entropy
         """
         logit = logit.squeeze(dim=0)  # [19, h ,w]
@@ -57,6 +68,10 @@ class FloatingRegionScore(nn.Module):
 
         assert unc_type in ['entropy', 'hyperbolic', 'certainty', 'none'], "error: unc_type '{}' not implemented".format(unc_type)
         region_uncertainty = self.compute_region_uncertainty(unc_type, logit, p, decoder_out)
+        if alpha is not None:
+            region_uncertainty_entropy = self.compute_region_uncertainty('entropy', logit, p, decoder_out)
+            region_uncertainty_hyper = self.compute_region_uncertainty('hyperbolic', logit, p, decoder_out)
+            region_uncertainty = (1-alpha) * region_uncertainty_entropy + alpha * region_uncertainty_hyper
         if unc_type == 'none':
             region_sum_uncert = region_uncertainty
         else:

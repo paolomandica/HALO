@@ -119,18 +119,14 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
     classifier.eval()
 
     floating_region_score = FloatingRegionScore(
-        in_channels=cfg.MODEL.NUM_CLASSES, size=2 * cfg.ACTIVE.RADIUS_K + 1, cfg=cfg).cuda()
+        in_channels=cfg.MODEL.NUM_CLASSES, size=2 * cfg.ACTIVE.RADIUS_K + 1)
     per_region_pixels = (2 * cfg.ACTIVE.RADIUS_K + 1) ** 2
     active_radius = cfg.ACTIVE.RADIUS_K
     mask_radius = cfg.ACTIVE.RADIUS_K * 2
     active_ratio = cfg.ACTIVE.RATIO / len(cfg.ACTIVE.SELECT_ITER)
     uncertainty_type = cfg.ACTIVE.UNCERTAINTY
     purity_type = cfg.ACTIVE.PURITY
-
-    if cfg.ACTIVE.MIXED and round_number < 3:
-        uncertainty_type = 'entropy'
-    elif cfg.ACTIVE.MIXED and round_number >= 3:
-        uncertainty_type = cfg.ACTIVE.UNCERTAINTY
+    alpha = cfg.ACTIVE.ALPHA
 
     with torch.no_grad():
         idx = 0
@@ -175,7 +171,7 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                         decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
 
                     score, purity, uncertainty = floating_region_score(
-                        output, decoder_out=decoder_out, normalize=True, unc_type=uncertainty_type, pur_type=purity_type)
+                        output, decoder_out=decoder_out, normalize=True, unc_type=uncertainty_type, pur_type=purity_type, alpha=alpha)
 
                     score[active] = -float('inf')
 
