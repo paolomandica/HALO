@@ -45,8 +45,8 @@ def build_dataset(cfg, mode='train', is_source=True, epochwise=False, empty=Fals
         dataset = DatasetCatalog.get(cfg.DATASETS.TEST, 'val', num_classes=cfg.MODEL.NUM_CLASSES, max_iters=iters,
                                      transform=transform, cfg=cfg, empty=empty)
     elif mode == 'test':
-        dataset = DatasetCatalog.get(cfg.DATASETS.TEST, cfg.DATASETS.TEST.split('_')[-1],
+        dataset = DatasetCatalog.get(cfg.DATASETS.TEST, 'test',
                                      num_classes=cfg.MODEL.NUM_CLASSES, max_iters=iters, transform=transform, cfg=cfg,
-                                     empty=empty)
+                                     empty=empty)  # mode previously was cfg.DATASETS.TEST.split('_')[-1]
 
     return dataset

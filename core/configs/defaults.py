@@ -88,6 +88,7 @@ _C.TEST = CN()
 _C.TEST.BATCH_SIZE = 1
 _C.TEST.VIZ_SCORE = False
 _C.TEST.VIZ_WRONG = False
+_C.TEST.SAVE_EMBED = False
 
 _C.OUTPUT_DIR = ""
 _C.resume = ""

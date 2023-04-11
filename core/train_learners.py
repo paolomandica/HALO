@@ -55,13 +55,18 @@ class BaseLearner(pl.LightningModule):
         out = self.classifier(self.feature_extractor(input_data), size=input_size)
         return out
 
-    def inference(self, image, label, flip=False):
+    def inference(self, image, label, flip=True, save_embed_path=None):
         size = label.shape[-2:]
         if flip:
             image = torch.cat([image, torch.flip(image, [3])], 0)
-        output = self.classifier(self.feature_extractor(image))
-        if self.hyper:
-            output = output[0]
+        output, embed = self.classifier(self.feature_extractor(image))
+        if save_embed_path:
+            # embed = F.interpolate(embed, size=size, mode='bilinear', align_corners=True)
+            if flip:
+                embed = (embed[0] + embed[1].flip(2)) / 2
+            else:
+                embed = embed[0]
+            torch.save(embed.unsqueeze(0).cpu(), save_embed_path)
         output = F.interpolate(output, size=size, mode='bilinear', align_corners=True)
         output = F.softmax(output, dim=1)
         if flip:
@@ -447,9 +452,29 @@ class Test(BaseLearner):
     def test_step(self, batch, batch_idx):
         x, y, name = batch['img'], batch['label'], batch['name']
         name = name[0]
-        pred = self.inference(x, y, flip=True)
+        if self.cfg.TEST.SAVE_EMBED:
+            if not os.path.exists(self.cfg.OUTPUT_DIR + '/embed'):
+                os.makedirs(self.cfg.OUTPUT_DIR + '/embed')
+            name = name.rsplit('/', 1)[-1].rsplit('_', 1)[0]
+            file_name = self.cfg.OUTPUT_DIR + '/embed/' + name + '.pt'
+
+            label_name = self.cfg.OUTPUT_DIR + '/label/' + name + '.pt'
+            if not os.path.exists(self.cfg.OUTPUT_DIR + '/label'):
+                os.makedirs(self.cfg.OUTPUT_DIR + '/label')
+            torch.save(y.cpu(), label_name)
+        else:
+            file_name = None
+        pred = self.inference(x, y, flip=True, save_embed_path=file_name)
 
         output = pred.max(1)[1]
+
+        if self.cfg.TEST.SAVE_EMBED:
+            if not os.path.exists(self.cfg.OUTPUT_DIR + '/pred'):
+                os.makedirs(self.cfg.OUTPUT_DIR + '/pred')
+            # name = name.rsplit('/', 1)[-1].rsplit('_', 1)[0]
+            file_name = self.cfg.OUTPUT_DIR + '/pred/' + name + '.pt'
+            torch.save(output.cpu(), file_name)
+
         intersection, union, target = self.intersectionAndUnionGPU(
             output, y, self.cfg.MODEL.NUM_CLASSES, self.cfg.INPUT.IGNORE_LABEL)
 
