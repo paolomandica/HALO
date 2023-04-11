@@ -1,4 +1,5 @@
 import math
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -7,14 +8,13 @@ import torch.nn.functional as F
 
 class FloatingRegionScore(nn.Module):
 
-    def __init__(self, in_channels=19, padding_mode='zeros', size=33, cfg=None):
+    def __init__(self, in_channels=19, padding_mode='zeros', size=33):
         """
         purity_conv: size*size
         entropy_conv: size*size
         """
         super(FloatingRegionScore, self).__init__()
         self.in_channels = in_channels
-        self.cfg = cfg
         assert size % 2 == 1, "error size"
         self.purity_conv = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=size,
                                      stride=1, padding=int(size / 2), bias=False,
@@ -35,38 +35,47 @@ class FloatingRegionScore(nn.Module):
         self.entropy_conv.weight = weight
         self.entropy_conv.requires_grad_(False)
 
-    def forward(self, logit, decoder_out=None, unc_type=None, pur_type=None, normalize=False):
+    def compute_region_uncertainty(self, unc_type, logit, p, decoder_out):
+        if unc_type == 'entropy':
+            region_uncertainty = torch.sum(-p * torch.log(p + 1e-6), dim=0).unsqueeze(dim=0).unsqueeze(dim=0) / math.log(19)  # [1, 1, h, w]
+        elif unc_type == 'hyperbolic':
+            region_uncertainty = 1 - decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
+        elif unc_type == 'certainty':
+            region_uncertainty = decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
+        elif unc_type == 'none':
+            region_uncertainty = torch.zeros((1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32)
+        else:
+            raise NotImplementedError("unc_type '{}' not implemented".format(unc_type))
+        return region_uncertainty
+
+    def forward(self, logit: torch.Tensor, decoder_out: torch.Tensor = None, unc_type: str = None, pur_type: str = None, normalize: bool = False, alpha: float = None):
         """
-        return:
+        Compute regions score, impurity and uncertainty.
+
+        Args:
+            logit: an n-dimensional Tensor
+            decoder_out: an n-dimensional Tensor
+            unc_type: type of uncertainty to compute (entropy, hyperbolic, certainty, none)
+            pur_type: type of impurity to compute (ripu, none)
+            normalize: normalize the impurity and uncertainty
+            alpha: weight of hyperbolic uncertainty mixed with entropy uncertainty
+        
+        Return:
             score, purity, entropy
         """
         logit = logit.squeeze(dim=0)  # [19, h ,w]
         p = torch.softmax(logit, dim=0)  # [19, h, w]
 
-        if unc_type == 'entropy':
-            pixel_entropy = torch.sum(-p * torch.log(p + 1e-6), dim=0).unsqueeze(dim=0).unsqueeze(dim=0) / math.log(19)  # [1, 1, h, w]
-            region_sum_uncert = self.entropy_conv(pixel_entropy)  # [1, 1, h, w]
-            # region_sum_uncert = pixel_entropy
-        elif unc_type == 'hyperbolic':
-            hyper_uncert = 1 - decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
-            region_sum_uncert = self.entropy_conv(hyper_uncert)
-            # region_sum_uncert = hyper_uncert
-        elif unc_type == 'certainty':
-            hyper_cert = decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
-            region_sum_uncert = self.entropy_conv(hyper_cert)
-            # region_sum_uncert = hyper_cert
-        elif self.cfg.ACTIVE.UNCERTAINTY == 'entropy':
-            pixel_entropy = torch.sum(-p * torch.log(p + 1e-6), dim=0).unsqueeze(dim=0).unsqueeze(dim=0) / math.log(19)  # [1, 1, h, w]
-            region_sum_uncert = self.entropy_conv(pixel_entropy)  # [1, 1, h, w]
-        elif self.cfg.ACTIVE.UNCERTAINTY == 'hyperbolic':
-            hyper_uncert = 1 - decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
-            region_sum_uncert = self.entropy_conv(hyper_uncert)
-        elif self.cfg.ACTIVE.UNCERTAINTY == 'certainty':
-            hyper_uncert = decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
-            region_sum_uncert = self.entropy_conv(hyper_uncert)
-        elif self.cfg.ACTIVE.UNCERTAINTY == 'none':
-            region_sum_uncert = torch.zeros((1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32).cuda()
-
+        assert unc_type in ['entropy', 'hyperbolic', 'certainty', 'none'], "error: unc_type '{}' not implemented".format(unc_type)
+        region_uncertainty = self.compute_region_uncertainty(unc_type, logit, p, decoder_out)
+        if alpha is not None:
+            region_uncertainty_entropy = self.compute_region_uncertainty('entropy', logit, p, decoder_out)
+            region_uncertainty_hyper = self.compute_region_uncertainty('hyperbolic', logit, p, decoder_out)
+            region_uncertainty = (1-alpha) * region_uncertainty_entropy + alpha * region_uncertainty_hyper
+        if unc_type == 'none':
+            region_sum_uncert = region_uncertainty
+        else:
+            region_sum_uncert = self.entropy_conv(region_uncertainty)  # [1, 1, h, w]
 
         predict = torch.argmax(p, dim=0)  # [h, w]
         one_hot = F.one_hot(predict, num_classes=self.in_channels).float()
@@ -74,13 +83,11 @@ class FloatingRegionScore(nn.Module):
         summary = self.purity_conv(one_hot)  # [1, 19, h, w]
         count = torch.sum(summary, dim=1, keepdim=True)  # [1, 1, h, w]
         
+        assert pur_type in ['ripu', 'none'], "error: pur_type '{}' not implemented".format(pur_type)
         if pur_type == 'ripu':
             dist = summary / count
-            region_impurity = torch.sum(-dist * torch.log(dist + 1e-6), dim=1, keepdim=True) / math.log(19)  # [1, 1, h, w]
-        elif self.cfg.ACTIVE.PURITY == 'ripu':
-            dist = summary / count  # [1, 19, h, w]
-            region_impurity = torch.sum(-dist * torch.log(dist + 1e-6), dim=1, keepdim=True) / math.log(19)  # [1, 1, h, w]
-        elif self.cfg.ACTIVE.PURITY == 'none':
+            region_impurity = torch.sum(-dist * torch.log(dist + 1e-6), dim=1, keepdim=True) / math.log(19)
+        elif pur_type == 'none':
             region_impurity = torch.zeros((1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32).cuda()
 
         prediction_uncertainty = region_sum_uncert / count  # [1, 1, h, w]
