@@ -43,7 +43,7 @@ class FloatingRegionScore(nn.Module):
         elif unc_type == 'certainty':
             region_uncertainty = decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
         elif unc_type == 'none':
-            region_uncertainty = torch.zeros((1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32)
+            region_uncertainty = torch.zeros((1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32).cuda()
         else:
             raise NotImplementedError("unc_type '{}' not implemented".format(unc_type))
         return region_uncertainty
