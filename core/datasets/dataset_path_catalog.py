@@ -9,6 +9,7 @@ from torch.utils import data
 from PIL import Image
 from tqdm import tqdm
 import errno
+from joblib import Parallel, delayed
 
 
 class DatasetCatalog(object):
@@ -77,7 +78,8 @@ class DatasetCatalog(object):
         root = os.path.join(data_dir, attrs["data_dir"])
         with open(data_list, "r") as handle:
             content = handle.readlines()
-        for fname in tqdm(content):
+
+        def init_mask(fname):
             name = fname.strip()
             path2image = os.path.join(root, "leftImg8bit/%s/%s" % ('train', name))
             path2mask = os.path.join(
@@ -98,6 +100,7 @@ class DatasetCatalog(object):
                     + "_indicator.pth",
                 ),
             )
+
             mask_dir = os.path.join("%s/gtMask/train/%s" % (cfg.OUTPUT_DIR, name.split("/")[0]))
             indicator_dir = os.path.join("%s/gtIndicator/train/%s" % (cfg.OUTPUT_DIR, name.split("/")[0]))
 
@@ -116,6 +119,10 @@ class DatasetCatalog(object):
                 'selected': torch.tensor([0], dtype=torch.bool),
             }
             torch.save(indicator, path2indicator)
+
+        Parallel(n_jobs=8)(delayed(init_mask)(fname) for fname in tqdm(content))
+        # for fname in tqdm(content):
+        #     init_mask(fname)
 
 
 def mkdir_path(dir):
