@@ -44,7 +44,7 @@ class HyperMapper(object):
         inputs = inputs + EPS
         norm = torch.norm(inputs, dim=dim)  # protect div b 0
         gamma = torch.tanh(sqrt_c * norm) / (sqrt_c * norm)  # sh ncls
-        scaled_inputs = gamma[..., None] * inputs
+        scaled_inputs = gamma.unsqueeze(dim) * inputs
         return gmath.project(scaled_inputs, k=self.K, dim=dim, eps=PROJ_EPS)
 
     def logmap(self, x):
@@ -166,7 +166,8 @@ class HyperMLR(nn.Module):
         mobdota *= project_normalized  # equiv to project mob add to max norm before dot
         lamb_px = 2.0 / torch.max(1 - self.K * mobaddnormprojected, torch.tensor(1e-12, device=inputs.device))
         sineterm = torch.sqrt(self.K) * mobdota * lamb_px
-        out = 2.0 / torch.sqrt(self.K) * A_norm.unsqueeze(0).unsqueeze(-1).unsqueeze(-1) * \
+        lambda_term = 2.0 # / (1 - self.K * pp)  # (1,O,1,1)
+        out = lambda_term / torch.sqrt(self.K) * A_norm.unsqueeze(0).unsqueeze(-1).unsqueeze(-1) * \
             torch.asinh(sineterm)  # (B,O,H,W)
         return out
 

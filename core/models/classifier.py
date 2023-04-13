@@ -182,7 +182,7 @@ class ASPP_Classifier_V2_Hyper(nn.Module):
             embed += self.conv2d_list[i + 1](x)
 
         # hyperbolic classification
-        embed = self.mapper.expmap2(embed)
+        embed = self.mapper.expmap2(embed, dim=1)
         out = self.conv_seg(embed.double()).float()
 
         if size is not None:

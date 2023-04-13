@@ -35,7 +35,7 @@ class FloatingRegionScore(nn.Module):
         self.entropy_conv.weight = weight
         self.entropy_conv.requires_grad_(False)
 
-    def compute_region_uncertainty(self, unc_type, logit, p, decoder_out):
+    def compute_region_uncertainty(self, unc_type, logit, p, decoder_out, normalize=False):
         if unc_type == 'entropy':
             region_uncertainty = torch.sum(-p * torch.log(p + 1e-6), dim=0).unsqueeze(dim=0).unsqueeze(dim=0) / math.log(19)  # [1, 1, h, w]
         elif unc_type == 'hyperbolic':
@@ -46,6 +46,8 @@ class FloatingRegionScore(nn.Module):
             region_uncertainty = torch.zeros((1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32).cuda()
         else:
             raise NotImplementedError("unc_type '{}' not implemented".format(unc_type))
+        if normalize:
+            region_uncertainty = (region_uncertainty - region_uncertainty.min().item()) / (region_uncertainty.max().item() - region_uncertainty.min().item())
         return region_uncertainty
 
     def forward(self, logit: torch.Tensor, decoder_out: torch.Tensor = None, unc_type: str = None, pur_type: str = None, normalize: bool = False, alpha: float = None):

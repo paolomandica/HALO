@@ -171,7 +171,7 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                         decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
 
                     score, purity, uncertainty = floating_region_score(
-                        output, decoder_out=decoder_out, normalize=True, unc_type=uncertainty_type, pur_type=purity_type, alpha=alpha)
+                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type=uncertainty_type, pur_type=purity_type, alpha=alpha)
 
                     score[active] = -float('inf')
 
