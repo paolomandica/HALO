@@ -4,7 +4,7 @@ import warnings
 import torch
 from core.utils.misc import mkdir, parse_args
 from core.configs import cfg
-from core.train_learners import SourceFreeLearner, SourceLearner, SourceTargetLearner
+from core.train_learners import SourceFreeLearner, SourceLearner, SourceTargetLearner, FullySupervisedLearner
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers.wandb import WandbLogger
 import pytorch_lightning as pl
@@ -56,7 +56,10 @@ def main():
     elif cfg.PROTOCOL == 'source_free':
         learner = SourceFreeLearner(cfg)
     elif cfg.PROTOCOL == 'source_target':
-        learner = SourceTargetLearner(cfg)
+        if cfg.ACTIVE.RATIO == 1.:
+            learner = FullySupervisedLearner(cfg)
+        else:
+            learner = SourceTargetLearner(cfg)
     else:
         raise NotImplementedError(f'Protocol {cfg.PROTOCOL} is not implemented.')
 

@@ -28,7 +28,7 @@ ACTIVE:
   PURITY: 'ripu'            # 'ripu' or 'none'
   VIZ_MASK: False
 WANDB:
-  ENABLE: True
+  ENABLE: False
   PROJECT: 'active_domain_adapt'
   NAME: 'hyper_v3plus_RA_ripu_64_60k_fully_supervised'
   GROUP: 'source_target'
