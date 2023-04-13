@@ -80,6 +80,7 @@ _C.ACTIVE.RADIUS_K = 1
 # selected pixel visualization
 _C.ACTIVE.VIZ_MASK = True
 _C.ACTIVE.ALPHA = None
+_C.ACTIVE.NORMALIZE = False
 
 
 # ---------------------------------------------------------------------------- #
