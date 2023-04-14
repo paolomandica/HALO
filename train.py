@@ -2,6 +2,8 @@ from pathlib import Path
 import setproctitle
 import warnings
 import torch
+import os
+import shutil
 from core.utils.misc import mkdir, parse_args
 from core.configs import cfg
 from core.train_learners import SourceFreeLearner, SourceLearner, SourceTargetLearner, FullySupervisedLearner
@@ -102,6 +104,11 @@ def main():
     else:
         trainer.fit(learner)
 
+    # remove gtIndicator subdirectory
+    path = os.path.join(cfg.OUTPUT_DIR, 'gtIndicator')
+    if os.path.exists(path):
+        print("Removing gtIndicator directory...")
+        shutil.rmtree(path)
 
 if __name__ == '__main__':
     main()
