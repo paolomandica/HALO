@@ -25,7 +25,7 @@ class HyperMapper(object):
         self.c = c
         self.K = torch.tensor(-self.c, dtype=float)
 
-    def expmap(self, x):
+    def expmap(self, x, dim=-1):
         """Exponential mapping from Euclidean to hyperbolic space.
 
         Args:
@@ -34,8 +34,8 @@ class HyperMapper(object):
         Returns:
             torch.Tensor: Tensor of shape (..., d)
         """
-        x_hyp = gmath.expmap0(x.double(), k=self.K)
-        x_hyp = gmath.project(x_hyp, k=self.K)
+        x_hyp = gmath.expmap0(x.double(), k=self.K, dim=dim)
+        x_hyp = gmath.project(x_hyp, k=self.K, dim=dim)
         return x_hyp
         # return gmath.project(gmath.expmap0(x.double(), k=self.K), k=self.K)
 
