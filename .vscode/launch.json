@@ -86,5 +86,24 @@
                 "results/source_target/debug",
             ]
         }
+        ,
+        {
+            "name": "train_source_target",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/train.py",
+            "console": "integratedTerminal",
+            // "env": {
+            //     "name": "CUDA_VISIBLE_DEVICES",
+            //     "value": "0"
+            // },
+            "justMyCode": false,
+            "args": [
+                "-cfg",
+                "configs/gtav/hyper_deeplabv3plus_r101_RA.yaml",
+                "OUTPUT_DIR",
+                "results/source_target/debug",
+            ]
+        }
     ]
 }
