@@ -210,7 +210,7 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                 }
                 torch.save(indicator, path2indicator[i])
 
-            if cfg.ACTIVE.VIZ_MASK and idx in VIZ_LIST:
+            if cfg.ACTIVE.VIZ_MASK and (idx in VIZ_LIST) and (cfg.ACTIVE.RATIO < 1.):
                 img_np = F.interpolate(tgt_input, size=size, mode='bilinear',
                                        align_corners=True).cpu().numpy()[0].transpose(1, 2, 0)
                 img_np = (img_np * CITYSCAPES_STD + CITYSCAPES_MEAN).astype(np.uint8)

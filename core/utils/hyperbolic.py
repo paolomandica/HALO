@@ -7,6 +7,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import geoopt.manifolds.stereographic.math as gmath
 
+import matplotlib.pyplot as plt
+
 
 PROJ_EPS = 1e-3
 
@@ -41,8 +43,8 @@ class HyperMapper(object):
         PROJ_EPS = 1e-3
         EPS = 1e-15
         sqrt_c = torch.sqrt(torch.abs(self.K))
-        inputs = inputs + EPS
-        norm = torch.norm(inputs, dim=dim)  # protect div b 0
+        inputs = inputs + EPS    # protect div b 0
+        norm = torch.norm(inputs, dim=dim)  
         gamma = torch.tanh(sqrt_c * norm) / (sqrt_c * norm)  # sh ncls
         scaled_inputs = gamma.unsqueeze(dim) * inputs
         return gmath.project(scaled_inputs, k=self.K, dim=dim, eps=PROJ_EPS)

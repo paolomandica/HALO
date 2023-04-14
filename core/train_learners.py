@@ -10,12 +10,22 @@ from torch.utils.data import DataLoader
 from geoopt.optim import RiemannianSGD
 
 from core.datasets import build_dataset
+from core.configs import cfg
 from core.datasets.dataset_path_catalog import DatasetCatalog
 from core.loss.local_consistent_loss import LocalConsistentLoss
 from core.models import build_feature_extractor, build_classifier
 from core.utils.misc import AverageMeter, load_checkpoint, load_checkpoint_ripu
 from core.loss.negative_learning_loss import NegativeLearningLoss
 from core.active.build import PixelSelection, RegionSelection
+
+import matplotlib.pyplot as plt
+from core.utils.visualize import visualize_wrong 
+
+CITYSCAPES_MEAN = torch.Tensor([123.675, 116.28, 103.53]).reshape(1, 1, 3).numpy()
+CITYSCAPES_STD = torch.Tensor([58.395, 57.12, 57.375]).reshape(1, 1, 3).numpy()
+
+np.random.seed(cfg.SEED+1)
+VIZ_LIST = list(np.random.randint(0, 500, 20))
 
 
 class BaseLearner(pl.LightningModule):
@@ -55,18 +65,53 @@ class BaseLearner(pl.LightningModule):
         out = self.classifier(self.feature_extractor(input_data), size=input_size)
         return out
 
-    def inference(self, image, label, flip=True, save_embed_path=None):
+    def inference(self, image, label, flip=True, save_embed_path=None, save_wrong_path=None, cfg=None):
         size = label.shape[-2:]
         if flip:
             image = torch.cat([image, torch.flip(image, [3])], 0)
         output, embed = self.classifier(self.feature_extractor(image))
+
+        # CODE TO FIND PIXELS WITH RADIUS HIGHER THAN 1
+        # if flip:
+        #     embed_h = (embed[0] + embed[1].flip(2)) / 2
+        # else:
+        #     embed_h = embed[0]
+        # embed_h_norm = torch.norm(embed_h, dim=0)
+        # if embed_h_norm.flatten().max().item() > 1:
+        #     if (save_embed_path != None) and (not os.path.exists('/'.join(save_embed_path.replace('embed', 'embed_error').split('/')[:-1]))):
+        #         os.makedirs('/'.join(save_embed_path.replace('embed', 'embed_error').split('/')[:-1]))
+        #     img_red = F.interpolate(image[0].unsqueeze(0).float(), size=embed.shape[-2:], mode='nearest')
+        #     img_np = img_red[0].permute(1,2,0).cpu().numpy()
+        #     new_img = (img_np * CITYSCAPES_STD + CITYSCAPES_MEAN).astype(np.uint8)
+        #     plt.imshow(new_img, cmap='gray')
+        #     pxl_msk = embed_h_norm > 1
+        #     plt.imshow(pxl_msk.cpu().numpy(), alpha=0.7, cmap='cividis')  # autumn
+        #     new_path = save_embed_path.replace('embed', 'embed_error')[:-2] + 'png'
+        #     plt.savefig(new_path)
+
+        if save_wrong_path:
+            dir_path = os.path.join(self.cfg.OUTPUT_DIR, 'viz')
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+            dir_path = os.path.join(self.cfg.OUTPUT_DIR, 'viz', 'wrong')
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+            image = F.interpolate(image, size=size, mode='bilinear', align_corners=True)  # 640, 1280 --> 1024, 2048  || 160, 320
+            visualize_wrong(image[0], output[:1], embed[:1], label, save_wrong_path, cfg)
+
         if save_embed_path:
+            dir_path = os.path.join(self.cfg.OUTPUT_DIR, 'embed')
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
             # embed = F.interpolate(embed, size=size, mode='bilinear', align_corners=True)
             if flip:
                 embed = (embed[0] + embed[1].flip(2)) / 2
             else:
                 embed = embed[0]
             torch.save(embed.unsqueeze(0).cpu(), save_embed_path)
+
+        
+
         output = F.interpolate(output, size=size, mode='bilinear', align_corners=True)
         output = F.softmax(output, dim=1)
         if flip:
@@ -555,15 +600,20 @@ class Test(BaseLearner):
         name = name[0]
         name = name.rsplit('/', 1)[-1].rsplit('_', 1)[0]
 
-        file_name = None
+        embed_file_name = None
         if self.cfg.TEST.SAVE_EMBED:
-            file_name = self.save_embeddings(y, name, 'label')
+            self.save_embeddings(y, name, 'label')
+            embed_file_name = os.path.join(self.cfg.OUTPUT_DIR, 'embed', name + '.pt')
 
-        pred = self.inference(x, y, flip=True, save_embed_path=file_name)
+        wrong_file_name = None
+        if self.cfg.TEST.VIZ_WRONG and (batch_idx in VIZ_LIST):
+            wrong_file_name = os.path.join(self.cfg.OUTPUT_DIR, 'viz', 'wrong', name + '.png')
+
+        pred = self.inference(x, y, flip=True, save_embed_path=embed_file_name, save_wrong_path=wrong_file_name, cfg=self.cfg)
         output = pred.max(1)[1]
 
         if self.cfg.TEST.SAVE_EMBED:
-            _ = self.save_embeddings(output, name, 'output')
+            self.save_embeddings(output, name, 'output')
 
         intersection, union, target = self.intersectionAndUnionGPU(
             output, y, self.cfg.MODEL.NUM_CLASSES, self.cfg.INPUT.IGNORE_LABEL)
@@ -631,4 +681,3 @@ class Test(BaseLearner):
             os.makedirs(dir_path)
         file_name = os.path.join(dir_path, name + '.pt')
         torch.save(output.cpu(), file_name)
-        return file_name
