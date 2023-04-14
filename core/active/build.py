@@ -227,8 +227,9 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
             visualization_plots(img_np, score_np, active_mask_np, round_number, name)
 
     with torch.no_grad():
-        # for tgt_data in tqdm(tgt_epoch_loader):
-        Parallel(n_jobs=8)(delayed(select_region)(tgt_data) for tgt_data in tqdm(tgt_epoch_loader))
+        for tgt_data in tqdm(tgt_epoch_loader):
+            select_region(tgt_data)
+        # Parallel(n_jobs=8)(delayed(select_region)(tgt_data) for tgt_data in tqdm(tgt_epoch_loader))
 
     feature_extractor.train()
     classifier.train()
