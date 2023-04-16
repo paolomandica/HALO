@@ -182,7 +182,7 @@ class ASPP_Classifier_V2_Hyper(nn.Module):
             embed += self.conv2d_list[i + 1](x)
 
         # hyperbolic classification
-        embed = self.mapper.expmap2(embed, dim=1)
+        embed = self.mapper.expmap(embed, dim=1)
         out = self.conv_seg(embed.double()).float()
 
         if size is not None:
@@ -273,7 +273,7 @@ class DepthwiseSeparableASPP_Hyper(nn.Module):
 
         # hyperbolic layer
         decoder_out = self.conv_reduce(decoder_out)
-        decoder_out = self.mapper.expmap2(decoder_out, dim=1)
+        decoder_out = self.mapper.expmap(decoder_out, dim=1)
         out = self.conv_seg(decoder_out.double()).float()
 
         if size is not None:

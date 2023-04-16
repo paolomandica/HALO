@@ -83,7 +83,7 @@ class FloatingRegionScore(nn.Module):
         if unc_type == 'none':
             region_sum_uncert = region_uncertainty
         else:
-            region_sum_uncert = self.entropy_conv(region_uncertainty)  # [1, 1, h, w]
+            region_sum_uncert = self.entropy_conv(region_uncertainty.float())  # [1, 1, h, w]
 
         predict = torch.argmax(p, dim=0)  # [h, w]
         one_hot = F.one_hot(predict, num_classes=self.in_channels).float()

@@ -38,7 +38,6 @@ class BaseLearner(pl.LightningModule):
         # create network
         self.feature_extractor = build_feature_extractor(cfg)
         self.classifier = build_classifier(cfg)
-        print(self.classifier)
 
         # resume checkpoint if needed
         if cfg.resume:
@@ -218,7 +217,7 @@ class SourceLearner(BaseLearner):
         for opt in optimizers:
             opt.zero_grad()
 
-        src_input, src_label = batch['img'], batch['label']
+        src_input, src_label = batch['img'], batch['label']   # shape [B, 3, 720, 1280]
         src_out = self.forward(src_input)
         if self.hyper:
             src_out = src_out[0]

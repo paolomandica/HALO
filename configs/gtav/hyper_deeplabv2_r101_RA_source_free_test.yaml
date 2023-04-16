@@ -1,13 +1,13 @@
 MODEL:
-  NAME: "deeplabv3plus_resnet101"
+  NAME: "deeplabv3plus_resnet101"  #  deeplabv2_resnet101 or deeplabv3plus_resnet101
   WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
   FREEZE_BN: True
   HYPER: True
-  REDUCED_CHANNELS: 2      # 256 or 10
+  REDUCED_CHANNELS: 64     # 256 or 64 or 10 or 3 or 2
 DATASETS:
   SOURCE_TRAIN: "gtav_train"
   TARGET_TRAIN: "cityscapes_train"
-  TEST: "cityscapes_train" # "cityscapes_val"
+  TEST: "cityscapes_val" # cityscapes_train or cityscapes_val
 INPUT:
   SOURCE_INPUT_SIZE_TRAIN: (1280, 720)
   TARGET_INPUT_SIZE_TRAIN: (1280, 640)
@@ -21,26 +21,26 @@ SOLVER:
   CHECKPOINT_PERIOD: 1000
   BATCH_SIZE: 2
 ACTIVE:
-  NAME: 'AL-RIPU1'
+  NAME: 'AL-RIPU'
   SETTING: 'RA'
   SELECT_ITER: [0, 10001, 15001, 20001, 25001]
   # SELECT_EPOCH: [0, 10, 15, 20, 25]
-  RATIO: 0.022
+  RATIO: 0.022    # 0.022  or  0.01  or  1.
   RADIUS_K: 1  # smaller might be better
-  UNCERTAINTY: 'hyperbolic' # 'entropy' or 'hyperbolic' or 'certainty' or 'none'
-  PURITY: 'none'            # 'ripu' or 'none'
+  UNCERTAINTY: 'entropy' # 'entropy' or 'hyperbolic' or 'certainty' or 'none'
+  PURITY: 'ripu'            # 'ripu' or 'none'
   VIZ_MASK: False
 WANDB:
   ENABLE: False
   PROJECT: 'active_domain_adapt'
-  NAME: 'dlv3_RA_hyper_hypunc_only_ch64'
+  NAME: 'dlv3_hyper_fully_supervised_ch3'
   GROUP: 'source_free'
   ENTITY: 'pinlab-sapienza'
 TEST:
   VIZ_SCORE: False
-  VIZ_WRONG: False
-TEST:
+  VIZ_WRONG: True
+  SAVE_EMBED: False
   BATCH_SIZE: 1
-resume: "results/source_free/dlv3_hyper_fully_supervised_ch2/model_global_step=11198.0_mIoU=21.23.ckpt"
-OUTPUT_DIR: 'results/source_free/dlv3_hyper_fully_supervised_ch2/test'
+resume: "results/source_free/dlv3_RA_hyper_ripu_64_fixed_expmap/model_global_step=14398.0_mIoU=71.29.ckpt"
+OUTPUT_DIR: 'results/source_free/dlv3_RA_hyper_ripu_64_fixed_expmap/test'
 DEBUG: 0
