@@ -273,7 +273,7 @@ class DepthwiseSeparableASPP_Hyper(nn.Module):
 
         # hyperbolic layer
         decoder_out = self.conv_reduce(decoder_out)
-        decoder_out = self.mapper.expmap2(decoder_out, dim=1)
+        decoder_out = self.mapper.expmap(decoder_out, dim=1)
         out = self.conv_seg(decoder_out.double()).float()
 
         if size is not None:

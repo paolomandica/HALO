@@ -38,7 +38,6 @@ class BaseLearner(pl.LightningModule):
         # create network
         self.feature_extractor = build_feature_extractor(cfg)
         self.classifier = build_classifier(cfg)
-        print(self.classifier)
 
         # resume checkpoint if needed
         if cfg.resume:
@@ -69,7 +68,11 @@ class BaseLearner(pl.LightningModule):
         size = label.shape[-2:]
         if flip:
             image = torch.cat([image, torch.flip(image, [3])], 0)
-        output, embed = self.classifier(self.feature_extractor(image))
+        
+        if self.cfg.MODEL.HYPER:
+            output, embed = self.classifier(self.feature_extractor(image))
+        else:
+            output = self.classifier(self.feature_extractor(image))
 
         # CODE TO FIND PIXELS WITH RADIUS HIGHER THAN 1
         # if flip:
@@ -109,8 +112,6 @@ class BaseLearner(pl.LightningModule):
             else:
                 embed = embed[0]
             torch.save(embed.unsqueeze(0).cpu(), save_embed_path)
-
-        
 
         output = F.interpolate(output, size=size, mode='bilinear', align_corners=True)
         output = F.softmax(output, dim=1)
