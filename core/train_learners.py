@@ -219,7 +219,7 @@ class SourceLearner(BaseLearner):
         for opt in optimizers:
             opt.zero_grad()
 
-        src_input, src_label = batch['img'], batch['label']
+        src_input, src_label = batch['img'], batch['label']   # shape [B, 3, 720, 1280]
         src_out = self.forward(src_input)
         if self.hyper:
             src_out = src_out[0]
