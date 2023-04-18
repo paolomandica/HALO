@@ -163,6 +163,76 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                     active_mask = ground_truth
                     active = torch.ones_like(active_mask, dtype=torch.bool)
                     selected = torch.ones_like(active_mask, dtype=torch.bool)
+                elif uncertainty_type == 'certuncert':
+                    output = tgt_out[i:i + 1, :, :, :]
+                    output = F.interpolate(output, size=size, mode='bilinear', align_corners=True)
+
+                    decoder_out = decoder_out[i:i + 1, :, :, :]
+                    decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
+
+                    score_unc, purity, uncertainty = floating_region_score(
+                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='entropy', pur_type='ripu', alpha=alpha)
+                    
+                    score_cert, purity, uncertainty = floating_region_score(
+                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='certainty', pur_type='ripu', alpha=alpha)
+
+                    score_unc[active] = -float('inf')
+
+                    weight_uncert = cfg.ACTIVE.WEIGHT_UNCERT[round_number-1]
+                    active_regions = math.ceil(weight_uncert * ((num_pixel_cur * active_ratio) / per_region_pixels))
+
+                    for pixel in range(active_regions):
+                        values, indices_h = torch.max(score_unc, dim=0)
+                        _, indices_w = torch.max(values, dim=0)
+                        w = indices_w.item()
+                        h = indices_h[w].item()
+
+                        active_start_w = w - active_radius if w - active_radius >= 0 else 0
+                        active_start_h = h - active_radius if h - active_radius >= 0 else 0
+                        active_end_w = w + active_radius + 1
+                        active_end_h = h + active_radius + 1
+
+                        mask_start_w = w - mask_radius if w - mask_radius >= 0 else 0
+                        mask_start_h = h - mask_radius if h - mask_radius >= 0 else 0
+                        mask_end_w = w + mask_radius + 1
+                        mask_end_h = h + mask_radius + 1
+
+                        # mask out
+                        score_unc[mask_start_h:mask_end_h, mask_start_w:mask_end_w] = -float('inf')
+                        active[mask_start_h:mask_end_h, mask_start_w:mask_end_w] = True
+                        selected[active_start_h:active_end_h, active_start_w:active_end_w] = True
+                        # active sampling
+                        active_mask[active_start_h:active_end_h, active_start_w:active_end_w] = \
+                            ground_truth[active_start_h:active_end_h, active_start_w:active_end_w]
+                        
+                    score_cert[active] = -float('inf')
+                    active_regions = math.ceil((1-weight_uncert) * ((num_pixel_cur * active_ratio) / per_region_pixels))
+
+                    for pixel in range(active_regions):
+                        values, indices_h = torch.max(score_cert, dim=0)
+                        _, indices_w = torch.max(values, dim=0)
+                        w = indices_w.item()
+                        h = indices_h[w].item()
+
+                        active_start_w = w - active_radius if w - active_radius >= 0 else 0
+                        active_start_h = h - active_radius if h - active_radius >= 0 else 0
+                        active_end_w = w + active_radius + 1
+                        active_end_h = h + active_radius + 1
+
+                        mask_start_w = w - mask_radius if w - mask_radius >= 0 else 0
+                        mask_start_h = h - mask_radius if h - mask_radius >= 0 else 0
+                        mask_end_w = w + mask_radius + 1
+                        mask_end_h = h + mask_radius + 1
+
+                        # mask out
+                        score_cert[mask_start_h:mask_end_h, mask_start_w:mask_end_w] = -float('inf')
+                        active[mask_start_h:mask_end_h, mask_start_w:mask_end_w] = True
+                        selected[active_start_h:active_end_h, active_start_w:active_end_w] = True
+                        # active sampling
+                        active_mask[active_start_h:active_end_h, active_start_w:active_end_w] = \
+                            ground_truth[active_start_h:active_end_h, active_start_w:active_end_w]
+                    
+
                 else:
                     output = tgt_out[i:i + 1, :, :, :]
                     output = F.interpolate(output, size=size, mode='bilinear', align_corners=True)
