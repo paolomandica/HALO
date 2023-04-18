@@ -8,14 +8,14 @@
             "name": "train_source",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/train_source.py",
+            "program": "${workspaceFolder}/train.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
                 "-cfg",
-                "configs/gtav/deeplabv2_r101_src.yaml",
+                "configs/gtav/hyper_deeplabv3plus_r101_src.yaml",
                 "OUTPUT_DIR",
-                "results/pretrain_gtav"
+                "results/pretrain_gtav/debug"
             ]
         },
         {
@@ -74,10 +74,10 @@
             "request": "launch",
             "program": "${workspaceFolder}/train.py",
             "console": "integratedTerminal",
-            "env": {
-                "name": "CUDA_VISIBLE_DEVICES",
-                "value": "0"
-            },
+            // "env": {
+            //     "name": "CUDA_VISIBLE_DEVICES",
+            //     "value": "0"
+            // },
             "justMyCode": false,
             "args": [
                 "-cfg",

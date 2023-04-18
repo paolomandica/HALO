@@ -19,6 +19,6 @@ TEST:
   VIZ_WRONG: False
 TEST:
   BATCH_SIZE: 1
-resume: 'results/source_target/hyper_v3plus_RA_ripu_64/model_global_step=19998.0_mIoU=72.35.ckpt'
-OUTPUT_DIR: 'results/source_target/hyper_v3plus_RA_ripu_64'
+resume: 'results/source_target/hyper_v3plus_RA_ripu_64_mixed_unc_075/model_global_step=19198.0_mIoU=70.80.ckpt'
+OUTPUT_DIR: 'results/source_target/hyper_v3plus_RA_ripu_64_mixed_unc_075'
 DEBUG: 0

@@ -4,6 +4,7 @@ MODEL:
   FREEZE_BN: True
   HYPER: True
   REDUCED_CHANNELS: 64      # 256 or 10
+  WEIGHTED_NORM: True
 DATASETS:
   SOURCE_TRAIN: "gtav_train"
   TARGET_TRAIN: "cityscapes_train"
@@ -13,16 +14,17 @@ INPUT:
   TARGET_INPUT_SIZE_TRAIN: (1280, 640)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
-  GPUS: [4,5,6,7]      # [0,1,2,3] or [4,5,6,7]
+  GPUS: [0,1,2,3]
+  # GPUS: [4,5,6,7]
   BASE_LR: 1e-3
-  NUM_ITER: 50000
+  NUM_ITER: 60000
   CHECKPOINT_PERIOD: 500
   BATCH_SIZE: 2
 ACTIVE:
   NAME: 'AL-RIPU'
   SETTING: 'RA'
-  SELECT_ITER: [0, 15001, 30001, 35001, 40001]   # [0, 10001, 15001, 20001, 25001] or [0, 15001, 30001, 40001, 50001]
-  RATIO: 0.022     # 0.022  or  0.05  or  1.
+  SELECT_ITER: [0, 15001, 30001, 40001, 50001]   # [0, 10001, 15001, 20001, 25001] or [0, 15001, 30001, 40001, 50001]
+  RATIO: 0.05     # 0.022  or  0.05  or  1.
   RADIUS_K: 1      # smaller might be better
   UNCERTAINTY: 'entropy'   # 'entropy' or 'hyperbolic' or 'certainty' or 'none'
   PURITY: 'ripu'             # 'ripu' or 'none'
@@ -31,8 +33,8 @@ ACTIVE:
 WANDB:
   ENABLE: True
   PROJECT: 'active_domain_adapt'
-  NAME: 'dlv3_hyper_64_ent_impur_post_fix'
-  GROUP: 'source_free'
+  NAME: 'dlv3_hyper_64_WN_ent_impur'
+  GROUP: 'source_target'
   ENTITY: 'pinlab-sapienza'
 TEST:
   VIZ_SCORE: False
@@ -40,7 +42,7 @@ TEST:
 TEST:
   BATCH_SIZE: 1
 # checkpoint: 'results/source_target/hyper_v3plus_RA_ripu_64/epoch=0-step=20000.ckpt'
-resume: 'results/pretrain_gtav/hyper_v3plus_ch_64_new_our_expmap/model_global_step=25998.0_mIoU=33.07.ckpt'
-OUTPUT_DIR: 'results/source_free/dlv3_hyper_64_ent_impur_post_fix'
+resume: 'results/pretrain_gtav/hyper_v3plus_ch_64_WN/model_global_step=25998.0_mIoU=38.99.ckpt'
+OUTPUT_DIR: 'results/source_free/dlv3_hyper_64_WN_ent_impur'
 DEBUG: 0
-PROTOCOL: 'source_free'   # source | source_target | source_free
+PROTOCOL: 'source_target'   # source | source_target | source_free

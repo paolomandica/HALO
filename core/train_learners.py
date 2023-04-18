@@ -19,7 +19,7 @@ from core.loss.negative_learning_loss import NegativeLearningLoss
 from core.active.build import PixelSelection, RegionSelection
 
 import matplotlib.pyplot as plt
-from core.utils.visualize import visualize_wrong 
+from core.utils.visualize import visualize_wrong
 
 CITYSCAPES_MEAN = torch.Tensor([123.675, 116.28, 103.53]).reshape(1, 1, 3).numpy()
 CITYSCAPES_STD = torch.Tensor([58.395, 57.12, 57.375]).reshape(1, 1, 3).numpy()
@@ -68,29 +68,11 @@ class BaseLearner(pl.LightningModule):
         size = label.shape[-2:]
         if flip:
             image = torch.cat([image, torch.flip(image, [3])], 0)
-        
-        if self.cfg.MODEL.HYPER:
+
+        if self.hyper:
             output, embed = self.classifier(self.feature_extractor(image))
         else:
             output = self.classifier(self.feature_extractor(image))
-
-        # CODE TO FIND PIXELS WITH RADIUS HIGHER THAN 1
-        # if flip:
-        #     embed_h = (embed[0] + embed[1].flip(2)) / 2
-        # else:
-        #     embed_h = embed[0]
-        # embed_h_norm = torch.norm(embed_h, dim=0)
-        # if embed_h_norm.flatten().max().item() > 1:
-        #     if (save_embed_path != None) and (not os.path.exists('/'.join(save_embed_path.replace('embed', 'embed_error').split('/')[:-1]))):
-        #         os.makedirs('/'.join(save_embed_path.replace('embed', 'embed_error').split('/')[:-1]))
-        #     img_red = F.interpolate(image[0].unsqueeze(0).float(), size=embed.shape[-2:], mode='nearest')
-        #     img_np = img_red[0].permute(1,2,0).cpu().numpy()
-        #     new_img = (img_np * CITYSCAPES_STD + CITYSCAPES_MEAN).astype(np.uint8)
-        #     plt.imshow(new_img, cmap='gray')
-        #     pxl_msk = embed_h_norm > 1
-        #     plt.imshow(pxl_msk.cpu().numpy(), alpha=0.7, cmap='cividis')  # autumn
-        #     new_path = save_embed_path.replace('embed', 'embed_error')[:-2] + 'png'
-        #     plt.savefig(new_path)
 
         if save_wrong_path:
             dir_path = os.path.join(self.cfg.OUTPUT_DIR, 'viz')
@@ -99,7 +81,8 @@ class BaseLearner(pl.LightningModule):
             dir_path = os.path.join(self.cfg.OUTPUT_DIR, 'viz', 'wrong')
             if not os.path.exists(dir_path):
                 os.makedirs(dir_path)
-            image = F.interpolate(image, size=size, mode='bilinear', align_corners=True)  # 640, 1280 --> 1024, 2048  || 160, 320
+            # 640, 1280 --> 1024, 2048  || 160, 320
+            image = F.interpolate(image, size=size, mode='bilinear', align_corners=True)
             visualize_wrong(image[0], output[:1], embed[:1], label, save_wrong_path, cfg)
 
         if save_embed_path:
@@ -143,7 +126,7 @@ class BaseLearner(pl.LightningModule):
         output = pred.max(1)[1]
         intersection, union, target = self.intersectionAndUnionGPU(
             output, y, self.cfg.MODEL.NUM_CLASSES, self.cfg.INPUT.IGNORE_LABEL)
-        
+
         intersection = np.expand_dims(intersection, axis=0)
         union = np.expand_dims(union, axis=0)
         target = np.expand_dims(target, axis=0)
@@ -208,6 +191,15 @@ class BaseLearner(pl.LightningModule):
         scheduler_cls = torch.optim.lr_scheduler.PolynomialLR(
             optimizer_cls, self.cfg.SOLVER.NUM_ITER, power=self.cfg.SOLVER.LR_POWER)
         return [optimizer_fea, optimizer_cls], [scheduler_fea, scheduler_cls]
+    
+    def log_step_and_lr(self):
+        self.log('global_step', self.global_step, on_step=True, on_epoch=False)
+        base_lr = self.trainer.optimizers[0].param_groups[0]['lr']
+        self.log('base_lr', base_lr, on_step=True, on_epoch=False)
+        if len(self.trainer.optimizers) == 2:
+            classifier_lr = self.trainer.optimizers[1].param_groups[0]['lr']
+            self.log('classifier_lr', classifier_lr, on_step=True, on_epoch=False)
+        
 
 
 class SourceLearner(BaseLearner):
@@ -226,9 +218,7 @@ class SourceLearner(BaseLearner):
 
         loss = self.criterion(src_out, src_label)
         self.log('loss', loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
-        lr = self.trainer.optimizers[0].param_groups[0]['lr']
-        self.log('lr', lr, on_step=True, on_epoch=False)
-        self.log('global_step', self.global_step, on_step=True, on_epoch=False)
+        self.log_step_and_lr()
 
         # manual backward pass
         self.manual_backward(loss)
@@ -238,17 +228,6 @@ class SourceLearner(BaseLearner):
             sched.step()
 
         return loss
-
-    # def configure_optimizers(self):
-    #     if self.hyper:
-    #         optim = RiemannianSGD
-    #     else:
-    #         optim = torch.optim.SGD
-    #     optimizer = optim(self.parameters(), lr=self.cfg.SOLVER.BASE_LR,
-    #                       momentum=self.cfg.SOLVER.MOMENTUM, weight_decay=self.cfg.SOLVER.WEIGHT_DECAY)
-    #     scheduler = torch.optim.lr_scheduler.PolynomialLR(
-    #         optimizer, self.cfg.SOLVER.NUM_ITER, power=self.cfg.SOLVER.LR_POWER)
-    #     return [optimizer], [scheduler]
 
     def train_dataloader(self):
         train_set = build_dataset(self.cfg, mode='train', is_source=True)
@@ -284,6 +263,7 @@ class SourceFreeLearner(BaseLearner):
             print(">>>>>>>>>>>>>>>> Debug Mode >>>>>>>>>>>>>>>>")
 
         # active learning dataloader
+        self.active_round = 1
         active_set = build_dataset(self.cfg, mode='active', is_source=False, epochwise=True)
         self.active_loader = DataLoader(
             dataset=active_set,
@@ -300,8 +280,6 @@ class SourceFreeLearner(BaseLearner):
 
         # create criterion
         self.negative_criterion = NegativeLearningLoss()
-
-        self.active_round = 1
 
     def compute_active_iters(self):
         denom = self.cfg.SOLVER.NUM_ITER * self.cfg.SOLVER.BATCH_SIZE * len(self.cfg.SOLVER.GPUS)
@@ -360,10 +338,7 @@ class SourceFreeLearner(BaseLearner):
             self.log('negative_loss', negative_loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
 
         self.log('loss', loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
-
-        lr = self.trainer.optimizers[0].param_groups[0]['lr']
-        self.log('lr', lr, on_step=True, on_epoch=False)
-        self.log('global_step', self.global_step, on_step=True, on_epoch=False)
+        self.log_step_and_lr()
 
         # manual backward pass
         self.manual_backward(loss)
@@ -449,10 +424,7 @@ class SourceTargetLearner(SourceFreeLearner):
             self.log('negative_loss', negative_loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
 
         self.log('loss', loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
-
-        lr = self.trainer.optimizers[0].param_groups[0]['lr']
-        self.log('lr', lr, on_step=True, on_epoch=False)
-        self.log('global_step', self.global_step, on_step=True, on_epoch=False)
+        self.log_step_and_lr()
 
         # manual backward pass
         self.manual_backward(loss)
@@ -500,7 +472,7 @@ class FullySupervisedLearner(SourceFreeLearner):
 
     def on_train_start(self):
         return None
-    
+
     def on_train_batch_start(self, batch, batch_idx):
         return batch, batch_idx
 
@@ -521,10 +493,10 @@ class FullySupervisedLearner(SourceFreeLearner):
         tgt_out = self.forward(tgt_input)
         if self.hyper:
             tgt_out = tgt_out[0]
-        
+
         predict = torch.softmax(tgt_out, dim=1)
         loss = torch.Tensor([0]).cuda()
-        
+
         # source supervision loss
         loss_sup = self.criterion(src_out, src_label)
         loss += loss_sup
@@ -541,18 +513,15 @@ class FullySupervisedLearner(SourceFreeLearner):
             loss += consistency_loss
             self.log('consistency_loss', consistency_loss.item(), on_step=True,
                      on_epoch=False, sync_dist=True, prog_bar=True)
-            
+
         # target negative pseudo loss
         if self.cfg.SOLVER.NEGATIVE_LOSS > 0:
             negative_loss = self.negative_criterion(predict) * self.cfg.SOLVER.NEGATIVE_LOSS
             loss += negative_loss
             self.log('negative_loss', negative_loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
-        
-        self.log('loss', loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
 
-        lr = self.trainer.optimizers[0].param_groups[0]['lr']
-        self.log('lr', lr, on_step=True, on_epoch=False)
-        self.log('global_step', self.global_step, on_step=True, on_epoch=False)
+        self.log('loss', loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
+        self.log_step_and_lr()
 
         # manual backward pass
         self.manual_backward(loss)
@@ -610,7 +579,8 @@ class Test(BaseLearner):
         if self.cfg.TEST.VIZ_WRONG and (batch_idx in VIZ_LIST):
             wrong_file_name = os.path.join(self.cfg.OUTPUT_DIR, 'viz', 'wrong', name + '.png')
 
-        pred = self.inference(x, y, flip=True, save_embed_path=embed_file_name, save_wrong_path=wrong_file_name, cfg=self.cfg)
+        pred = self.inference(x, y, flip=True, save_embed_path=embed_file_name,
+                              save_wrong_path=wrong_file_name, cfg=self.cfg)
         output = pred.max(1)[1]
 
         if self.cfg.TEST.SAVE_EMBED:
@@ -675,7 +645,7 @@ class Test(BaseLearner):
             pin_memory=True,
             drop_last=False,)
         return test_loader
-    
+
     def save_embeddings(self, output, name, type='embed'):
         dir_path = os.path.join(self.cfg.OUTPUT_DIR, type)
         if not os.path.exists(dir_path):
