@@ -579,15 +579,16 @@ class Test(BaseLearner):
         if self.cfg.TEST.VIZ_WRONG and (batch_idx in VIZ_LIST):
             wrong_file_name = os.path.join(self.cfg.OUTPUT_DIR, 'viz', 'wrong', name + '.png')
 
-        pred = self.inference(x, y, flip=True, save_embed_path=embed_file_name,
+        output = self.inference(x, y, flip=True, save_embed_path=embed_file_name,
                               save_wrong_path=wrong_file_name, cfg=self.cfg)
-        output = pred.max(1)[1]
+        pred = output.max(1)[1]
 
         if self.cfg.TEST.SAVE_EMBED:
+            self.save_embeddings(pred, name, 'pred')
             self.save_embeddings(output, name, 'output')
 
         intersection, union, target = self.intersectionAndUnionGPU(
-            output, y, self.cfg.MODEL.NUM_CLASSES, self.cfg.INPUT.IGNORE_LABEL)
+            pred, y, self.cfg.MODEL.NUM_CLASSES, self.cfg.INPUT.IGNORE_LABEL)
 
         intersection = np.expand_dims(intersection, axis=0)
         union = np.expand_dims(union, axis=0)
