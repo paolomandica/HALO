@@ -16,7 +16,7 @@ from core.loss.local_consistent_loss import LocalConsistentLoss
 from core.models import build_feature_extractor, build_classifier
 from core.utils.misc import AverageMeter, load_checkpoint, load_checkpoint_ripu
 from core.loss.negative_learning_loss import NegativeLearningLoss
-from core.active.build import PixelSelection, RegionSelection, OracleAL
+from core.active.build import PixelSelection, RegionSelection, OracleAL, OracleMixedAL
 
 import matplotlib.pyplot as plt
 from core.utils.visualize import visualize_wrong
@@ -307,6 +307,12 @@ class SourceFreeLearner(BaseLearner):
                                round_number=self.active_round)
             elif self.cfg.ACTIVE.SETTING == 'oracle_cert':
                 OracleAL(cfg=self.cfg,
+                           feature_extractor=self.feature_extractor,
+                           classifier=self.classifier,
+                           tgt_epoch_loader=self.active_loader,
+                           round_number=self.active_round)
+            elif self.cfg.ACTIVE.SETTING == 'oracle_certuncert':
+                OracleMixedAL(cfg=self.cfg,
                            feature_extractor=self.feature_extractor,
                            classifier=self.classifier,
                            tgt_epoch_loader=self.active_loader,
