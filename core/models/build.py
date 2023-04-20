@@ -9,6 +9,7 @@ def build_feature_extractor(cfg):
     if backbone_name.startswith('resnet'):
         if cfg.MODEL.WEIGHTS != 'none':
             pretrained_backbone_flag = True
+            pretrained_weights = cfg.MODEL.WEIGHTS
         else:
             pretrained_backbone_flag = False
             pretrained_weights = None
