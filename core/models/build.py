@@ -41,7 +41,8 @@ def build_classifier(cfg):
             else:
                 classifier = DepthwiseSeparableASPP_Hyper(inplanes=2048, dilation_series=[1, 6, 12, 18],
                                                     padding_series=[1, 6, 12, 18], num_classes=cfg.MODEL.NUM_CLASSES,
-                                                    norm_layer=bn_layer, reduced_channels=cfg.MODEL.REDUCED_CHANNELS)
+                                                    norm_layer=bn_layer, reduced_channels=cfg.MODEL.REDUCED_CHANNELS,
+                                                    weighted_norm=cfg.MODEL.WEIGHTED_NORM)
     else:
         raise NotImplementedError
     return classifier

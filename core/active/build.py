@@ -163,6 +163,78 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                     active_mask = ground_truth
                     active = torch.ones_like(active_mask, dtype=torch.bool)
                     selected = torch.ones_like(active_mask, dtype=torch.bool)
+                elif uncertainty_type == 'certuncert':
+                    output = tgt_out[i:i + 1, :, :, :]
+                    output = F.interpolate(output, size=size, mode='bilinear', align_corners=True)
+
+                    decoder_out = decoder_out[i:i + 1, :, :, :]
+                    decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
+
+                    score_unc, purity, uncertainty = floating_region_score(
+                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='entropy', pur_type='ripu', alpha=alpha)
+                    
+                    score_cert, purity, uncertainty = floating_region_score(
+                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='certainty', pur_type='ripu', alpha=alpha)
+
+                    score_unc[active] = -float('inf')
+
+                    weight_uncert = cfg.ACTIVE.WEIGHT_UNCERT[round_number-1]
+                    active_regions = math.ceil(weight_uncert * ((num_pixel_cur * active_ratio) / per_region_pixels))
+                    active_mask_unc = torch.zeros_like(active_mask)
+                    for pixel in range(active_regions):
+                        values, indices_h = torch.max(score_unc, dim=0)
+                        _, indices_w = torch.max(values, dim=0)
+                        w = indices_w.item()
+                        h = indices_h[w].item()
+
+                        active_start_w = w - active_radius if w - active_radius >= 0 else 0
+                        active_start_h = h - active_radius if h - active_radius >= 0 else 0
+                        active_end_w = w + active_radius + 1
+                        active_end_h = h + active_radius + 1
+
+                        mask_start_w = w - mask_radius if w - mask_radius >= 0 else 0
+                        mask_start_h = h - mask_radius if h - mask_radius >= 0 else 0
+                        mask_end_w = w + mask_radius + 1
+                        mask_end_h = h + mask_radius + 1
+
+                        # mask out
+                        score_unc[mask_start_h:mask_end_h, mask_start_w:mask_end_w] = -float('inf')
+                        active[mask_start_h:mask_end_h, mask_start_w:mask_end_w] = True
+                        selected[active_start_h:active_end_h, active_start_w:active_end_w] = True
+                        # active sampling
+                        active_mask[active_start_h:active_end_h, active_start_w:active_end_w] = \
+                            ground_truth[active_start_h:active_end_h, active_start_w:active_end_w]
+                        active_mask_unc = active_mask.clone()
+                        
+                    score_cert[active] = -float('inf')
+                    active_regions = math.ceil((1-weight_uncert) * ((num_pixel_cur * active_ratio) / per_region_pixels))
+                    active_mask_cert = torch.zeros_like(active_mask)
+                    for pixel in range(active_regions):
+                        values, indices_h = torch.max(score_cert, dim=0)
+                        _, indices_w = torch.max(values, dim=0)
+                        w = indices_w.item()
+                        h = indices_h[w].item()
+
+                        active_start_w = w - active_radius if w - active_radius >= 0 else 0
+                        active_start_h = h - active_radius if h - active_radius >= 0 else 0
+                        active_end_w = w + active_radius + 1
+                        active_end_h = h + active_radius + 1
+
+                        mask_start_w = w - mask_radius if w - mask_radius >= 0 else 0
+                        mask_start_h = h - mask_radius if h - mask_radius >= 0 else 0
+                        mask_end_w = w + mask_radius + 1
+                        mask_end_h = h + mask_radius + 1
+
+                        # mask out
+                        score_cert[mask_start_h:mask_end_h, mask_start_w:mask_end_w] = -float('inf')
+                        active[mask_start_h:mask_end_h, mask_start_w:mask_end_w] = True
+                        selected[active_start_h:active_end_h, active_start_w:active_end_w] = True
+                        # active sampling
+                        active_mask[active_start_h:active_end_h, active_start_w:active_end_w] = \
+                            ground_truth[active_start_h:active_end_h, active_start_w:active_end_w]
+                        active_mask_cert = active_mask.clone()
+
+
                 else:
                     output = tgt_out[i:i + 1, :, :, :]
                     output = F.interpolate(output, size=size, mode='bilinear', align_corners=True)
@@ -203,6 +275,9 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                             ground_truth[active_start_h:active_end_h, active_start_w:active_end_w]
 
                 active_mask_np = np.array(active_mask.cpu().numpy(), dtype=np.uint8)
+                if cfg.ACTIVE.UNCERTAINTY == 'certuncert':
+                    active_mask_unc_np = np.array(active_mask_unc.cpu().numpy(), dtype=np.uint8)
+                    active_mask_cert_np = np.array(active_mask_cert.cpu().numpy(), dtype=np.uint8)
                 active_mask_IMG = Image.fromarray(active_mask_np)
                 active_mask_IMG.save(path2mask[i])
                 indicator = {
@@ -212,14 +287,21 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                 torch.save(indicator, path2indicator[i])
 
             if cfg.ACTIVE.VIZ_MASK and idx in VIZ_LIST:
-                img_np = F.interpolate(tgt_input, size=size, mode='bilinear',
-                                       align_corners=True).cpu().numpy()[0].transpose(1, 2, 0)
+                img_np = F.interpolate(tgt_input, size=size, mode='bilinear', align_corners=True).cpu().numpy()[0].transpose(1, 2, 0)
                 img_np = (img_np * CITYSCAPES_STD + CITYSCAPES_MEAN).astype(np.uint8)
+                name = tgt_data['name'][0]
                 # active_mask_np = F.interpolate(torch.Tensor(active_mask_np).unsqueeze(0).unsqueeze(0), size=torch.Size(img_np.shape[:2]), mode='bilinear', align_corners=True)
                 # active_mask_np = active_mask_np.cpu().numpy().squeeze(0).squeeze(0)
-                score_np = score.cpu().numpy()
-                name = tgt_data['name'][0]
-                visualization_plots(img_np, score_np, active_mask_np, round_number, name)
+                if cfg.ACTIVE.UNCERTAINTY != 'certuncert':
+                    score_np = score.cpu().numpy()
+                    visualization_plots(img_np, score_np, active_mask_np, round_number, name)
+                else:
+                    score_unc_np = score_unc.cpu().numpy()
+                    score_cert_np = score_cert.cpu().numpy()
+                    name_unc = name.rsplit('_', 1)[0]+'_unc_'+name.rsplit('_', 1)[1]
+                    visualization_plots(img_np, score_unc_np, active_mask_unc_np, round_number, name_unc)
+                    name_cert = name.rsplit('_', 1)[0]+'_cert_'+name.rsplit('_', 1)[1]
+                    visualization_plots(img_np, score_cert_np, active_mask_cert_np, round_number, name_cert)
             idx += 1
 
     feature_extractor.train()

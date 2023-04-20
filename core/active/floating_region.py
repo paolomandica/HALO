@@ -38,6 +38,8 @@ class FloatingRegionScore(nn.Module):
     def compute_region_uncertainty(self, unc_type, logit, p, decoder_out, normalize=False):
         if unc_type == 'entropy':
             region_uncertainty = torch.sum(-p * torch.log(p + 1e-6), dim=0).unsqueeze(dim=0).unsqueeze(dim=0) / math.log(19)  # [1, 1, h, w]
+        elif unc_type == 'ent_cert':
+            region_uncertainty = 1 - torch.sum(-p * torch.log(p + 1e-6), dim=0).unsqueeze(dim=0).unsqueeze(dim=0) / math.log(19)  # [1, 1, h, w]
         elif unc_type == 'hyperbolic':
             region_uncertainty = 1 - decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
         elif unc_type == 'certainty':
@@ -68,7 +70,7 @@ class FloatingRegionScore(nn.Module):
         logit = logit.squeeze(dim=0)  # [19, h ,w]
         p = torch.softmax(logit, dim=0)  # [19, h, w]
 
-        assert unc_type in ['entropy', 'hyperbolic', 'certainty', 'none'], "error: unc_type '{}' not implemented".format(unc_type)
+        assert unc_type in ['entropy', 'hyperbolic', 'certainty', 'ent_cert', 'none'], "error: unc_type '{}' not implemented".format(unc_type)
         if self.entropy_conv.weight.device != logit.device:
             self.entropy_conv = self.entropy_conv.to(logit.device)
             self.purity_conv = self.purity_conv.to(logit.device)

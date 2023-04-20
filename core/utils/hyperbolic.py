@@ -37,7 +37,6 @@ class HyperMapper(object):
         x_hyp = gmath.expmap0(x.double(), k=self.K, dim=dim)
         x_hyp = gmath.project(x_hyp, k=self.K, dim=dim)
         return x_hyp
-        # return gmath.project(gmath.expmap0(x.double(), k=self.K), k=self.K)
 
     def expmap2(self, inputs, dim=-1):
         PROJ_EPS = 1e-3

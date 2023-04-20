@@ -193,7 +193,8 @@ class ASPP_Classifier_V2_Hyper(nn.Module):
 
 
 class DepthwiseSeparableASPP_Hyper(nn.Module):
-    def __init__(self, inplanes, dilation_series, padding_series, num_classes, norm_layer, reduced_channels):
+    def __init__(self, inplanes, dilation_series, padding_series, num_classes,
+                 norm_layer, reduced_channels, weighted_norm):
         super(DepthwiseSeparableASPP_Hyper, self).__init__()
 
         out_channels = 512
@@ -245,6 +246,16 @@ class DepthwiseSeparableASPP_Hyper(nn.Module):
         self.mapper = HyperMapper()
         self.conv_seg = HyperMLR(reduced_channels, num_classes)
 
+        # init weighted normalization mlp
+        self.wn_mlp = None
+        if weighted_norm:
+            self.wn_mlp = nn.Sequential(
+                nn.Linear(reduced_channels, reduced_channels),
+                nn.BatchNorm1d(reduced_channels),
+                nn.ReLU(),
+                nn.Linear(reduced_channels, reduced_channels)
+            )
+
         self._init_weight()
 
     def forward(self, x, size=None):
@@ -271,8 +282,23 @@ class DepthwiseSeparableASPP_Hyper(nn.Module):
         feats = torch.cat([aspp_out, shortcut_out], dim=1)
         decoder_out = self.decoder(feats)
 
-        # hyperbolic layer
+        # reduce channels and work in low dimensions
         decoder_out = self.conv_reduce(decoder_out)
+
+        # weighted normalization
+        if self.wn_mlp is not None:
+            temp_out = decoder_out.permute(0, 2, 3, 1).contiguous().view(-1, decoder_out.size(1))
+            norm_weights = self.wn_mlp(temp_out)
+            norm_weights = norm_weights.view(-1, decoder_out.size(2)*decoder_out.size(3), decoder_out.size(1))
+            norm_weights = torch.mean(norm_weights, dim=1, keepdim=False)
+            norm_weights = norm_weights.view(-1, decoder_out.size(1), 1, 1)
+            norm_weights = torch.clamp(norm_weights, min=1e-5)
+            temp_out = decoder_out.reshape(-1, decoder_out.size(1), decoder_out.size(2)*decoder_out.size(3))
+            temp_out = F.normalize(temp_out, dim=-1)
+            temp_out = temp_out.reshape(-1, decoder_out.size(1), decoder_out.size(2), decoder_out.size(3))
+            decoder_out = temp_out * norm_weights
+
+        # hyperbolic classification
         decoder_out = self.mapper.expmap(decoder_out, dim=1)
         out = self.conv_seg(decoder_out.double()).float()
 

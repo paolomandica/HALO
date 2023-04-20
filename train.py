@@ -31,6 +31,17 @@ class PeriodicCheckpoint(ModelCheckpoint):
             current = Path(self.dirpath) / f"model_step_{pl_module.global_step}.ckpt"
             trainer.save_checkpoint(current)
 
+class ActiveRoundCheckpoint(ModelCheckpoint):
+    def __init__(self, dirpath: str):
+        super().__init__(save_top_k=-1)
+        self.dirpath = dirpath
+
+    def on_train_batch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule, *args, **kwargs):
+        if (pl_module.global_step + 1) in pl_module.active_iters:
+            assert self.dirpath is not None
+            current = Path(self.dirpath) / f"model_step_{pl_module.global_step}_round_{pl_module.active_round}.ckpt"
+            trainer.save_checkpoint(current)
+
 
 def main():
     args = parse_args()
@@ -78,6 +89,14 @@ def main():
         every=cfg.SOLVER.CHECKPOINT_PERIOD,
     )
 
+    callbacks = [checkcall_1, checkcall_2]
+
+    if cfg.PROTOCOL in ['source_target', 'source_free']:
+        checkcall_3 = ActiveRoundCheckpoint(
+            dirpath=cfg.OUTPUT_DIR,
+        )
+        callbacks.append(checkcall_3)
+
     # init trainer
     trainer = pl.Trainer(
         accelerator='gpu',
@@ -90,7 +109,7 @@ def main():
         strategy="ddp",
         num_nodes=1,
         logger=wandb_logger,
-        callbacks=[checkcall_1, checkcall_2],
+        callbacks=callbacks,
         check_val_every_n_epoch=1,
         val_check_interval=500,
         precision=32,
@@ -104,11 +123,11 @@ def main():
     else:
         trainer.fit(learner)
 
+if __name__ == '__main__':
+    main()
+
     # remove gtIndicator subdirectory
     path = os.path.join(cfg.OUTPUT_DIR, 'gtIndicator')
     if os.path.exists(path):
         print("Removing gtIndicator directory...")
         shutil.rmtree(path)
-
-if __name__ == '__main__':
-    main()
