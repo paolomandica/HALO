@@ -4,6 +4,7 @@ MODEL:
   FREEZE_BN: True
   HYPER: True
   REDUCED_CHANNELS: 64      # 256 or 10
+  WEIGHTED_NORM: True
 DATASETS:
   SOURCE_TRAIN: "gtav_train"
   TARGET_TRAIN: "cityscapes_train"
@@ -14,11 +15,13 @@ INPUT:
   INPUT_SIZE_TEST: (1280, 640)
 ACTIVE:
   NAME: 'AL-RIPU'
+SOLVER:
+  GPUS: [0]
 TEST:
   VIZ_SCORE: False
   VIZ_WRONG: False
-TEST:
+  SAVE_EMBED: True
   BATCH_SIZE: 1
-resume: 'results/source_target/hyper_v3plus_RA_ripu_64_mixed_unc_075/model_global_step=19198.0_mIoU=70.80.ckpt'
-OUTPUT_DIR: 'results/source_target/hyper_v3plus_RA_ripu_64_mixed_unc_075'
+resume: 'results/source_target/dlv3_hyper_64_WN_certuncert_5_perc_02to05/model_global_step=20998.0_mIoU=72.91.ckpt'
+OUTPUT_DIR: 'results/source_target/dlv3_/home/pmandica/HyperRIPU/results/source_target/dlv3_hyper_64_WN_certuncert_5_perc_02to05/testhyper_64_WN_certuncert_5_perc_02to05/test'
 DEBUG: 0

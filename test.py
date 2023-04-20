@@ -27,6 +27,7 @@ def main():
     # init trainer
     trainer = pl.Trainer(
         accelerator='gpu',
+        devices=cfg.SOLVER.GPUS,
         precision=32,
         detect_anomaly=True)
 
