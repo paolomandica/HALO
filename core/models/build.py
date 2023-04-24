@@ -38,7 +38,7 @@ def build_classifier(cfg):
             if not cfg.MODEL.HYPER:
                 classifier = DepthwiseSeparableASPP(inplanes=2048, dilation_series=[1, 6, 12, 18],
                                                     padding_series=[1, 6, 12, 18], num_classes=cfg.MODEL.NUM_CLASSES,
-                                                    norm_layer=bn_layer)
+                                                    norm_layer=bn_layer, weighted_norm=cfg.MODEL.WEIGHTED_NORM)
             else:
                 classifier = DepthwiseSeparableASPP_Hyper(inplanes=2048, dilation_series=[1, 6, 12, 18],
                                                     padding_series=[1, 6, 12, 18], num_classes=cfg.MODEL.NUM_CLASSES,
