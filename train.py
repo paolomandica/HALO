@@ -28,8 +28,10 @@ class PeriodicCheckpoint(ModelCheckpoint):
     def on_train_batch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule, *args, **kwargs):
         if (pl_module.global_step + 1) % self.every == 0:
             assert self.dirpath is not None
-            current = Path(self.dirpath) / f"model_step_{pl_module.global_step}.ckpt"
-            trainer.save_checkpoint(current)
+            # current = Path(self.dirpath) / f"model_step_{pl_module.global_step}.ckpt"
+            self.filename = f"model_{pl_module.global_step}"
+            filepath = Path(self.dirpath) + self.filename + '.ckpt'
+            trainer.save_checkpoint(filepath)
 
 class ActiveRoundCheckpoint(ModelCheckpoint):
     def __init__(self, dirpath: str):
@@ -39,8 +41,10 @@ class ActiveRoundCheckpoint(ModelCheckpoint):
     def on_train_batch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule, *args, **kwargs):
         if (pl_module.global_step + 1) in pl_module.active_iters:
             assert self.dirpath is not None
-            current = Path(self.dirpath) / f"model_step_{pl_module.global_step}_round_{pl_module.active_round}.ckpt"
-            trainer.save_checkpoint(current)
+            # current = Path(self.dirpath) / f"model_step_{pl_module.global_step}_round_{pl_module.active_round}.ckpt"
+            self.filename = f"model_{pl_module.global_step}_round_{pl_module.active_round}"
+            filepath = Path(self.dirpath) + self.filename + '.ckpt'
+            trainer.save_checkpoint(filepath)
 
 
 def main():
