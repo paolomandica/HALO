@@ -123,7 +123,8 @@ mmseg/.mim
 wandb
 !.vscode/launch.json
 artifacts
-datasets
+datasets/gtav
+datasets/cityscapes
 results
 checkpoints
 scripts/train_scripts_luca.sh
