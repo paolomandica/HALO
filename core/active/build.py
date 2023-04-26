@@ -120,10 +120,10 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
     classifier.eval()
 
     floating_region_score = FloatingRegionScore(
-        in_channels=cfg.MODEL.NUM_CLASSES, size=2 * cfg.ACTIVE.RADIUS_K + 1)
+        in_channels=cfg.MODEL.NUM_CLASSES, size=2 * cfg.ACTIVE.RADIUS_K + 1, purity_type=cfg.ACTIVE.PURITY, K=cfg.ACTIVE.K)
     per_region_pixels = (2 * cfg.ACTIVE.RADIUS_K + 1) ** 2
     active_radius = cfg.ACTIVE.RADIUS_K
-    mask_radius = cfg.ACTIVE.RADIUS_K * 2
+    mask_radius = cfg.ACTIVE.MASK_RADIUS_K
     active_ratio = cfg.ACTIVE.RATIO / len(cfg.ACTIVE.SELECT_ITER)
     uncertainty_type = cfg.ACTIVE.UNCERTAINTY
     purity_type = cfg.ACTIVE.PURITY
@@ -414,20 +414,25 @@ def OracleAL(cfg, feature_extractor, classifier, tgt_epoch_loader, round_number)
                     decoder_out = decoder_out[i:i + 1, :, :, :]
                     decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
 
-                _, _, certainty = floating_region_score(output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type=cfg.ACTIVE.UNCERTAINTY, pur_type=purity_type)
+                if round_number in [1,2,3]:
+                    score, purity, uncertainty = floating_region_score(output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='entropy', pur_type='ripu', alpha=alpha)
 
+                elif round_number in [4,5]:
+                    decoder_out = decoder_out[i:i + 1, :, :, :]
+                    decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
+                    _, _, certainty = floating_region_score(output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='certainty', pur_type=purity_type)
 
-                # ORACLE
-                pred_tensor = output.max(1)[1]
-                label_tensor = tgt_data['label'].to(pred_tensor.device)
-                mask_known = label_tensor != 255
-                mask_uncorrect = pred_tensor != label_tensor
-                mask_total = (mask_uncorrect & mask_known).squeeze(0)
+                    # ORACLE
+                    pred_tensor = output.max(1)[1]
+                    label_tensor = tgt_data['label'].to(pred_tensor.device)
+                    mask_known = label_tensor != 255
+                    mask_uncorrect = pred_tensor != label_tensor
+                    mask_total = (mask_uncorrect & mask_known).squeeze(0)
 
-                certain_uncorr = certainty.reshape(-1)[mask_total.reshape(-1)]
-                cert_mode = torch.mode(certain_uncorr, dim=0)[0].item()
-                score = -torch.abs(certainty - cert_mode)
-                score[~mask_uncorrect.squeeze(0)] = -float('inf')
+                    certain_uncorr = certainty.reshape(-1)[mask_total.reshape(-1)]
+                    cert_mode = torch.mode(certain_uncorr, dim=0)[0].item()
+                    score = -torch.abs(certainty - cert_mode)
+                    score[~mask_uncorrect.squeeze(0)] = -float('inf')
 
 
                 score[active] = -float('inf')
@@ -542,26 +547,23 @@ def OracleMixedAL(cfg, feature_extractor, classifier, tgt_epoch_loader, round_nu
                     decoder_out = decoder_out[i:i + 1, :, :, :]
                     decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
 
-                    _, impurity, entropy = floating_region_score(
-                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='entropy', pur_type='ripu', alpha=alpha)
+                    score_unc, impurity, entropy = floating_region_score(
+                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='certainty', pur_type='ripu', alpha=alpha)
 
 
                     # ORACLE ENTROPY
-                    pred_tensor = output.max(1)[1]
-                    label_tensor = tgt_data['label'].to(pred_tensor.device)
-                    mask_known = label_tensor != 255
-                    mask_uncorrect = pred_tensor != label_tensor
-                    mask_total = (mask_uncorrect & mask_known).squeeze(0)
+                    # pred_tensor = output.max(1)[1]
+                    # label_tensor = tgt_data['label'].to(pred_tensor.device)
+                    # mask_known = label_tensor != 255
+                    # mask_uncorrect = pred_tensor != label_tensor
+                    # mask_total = (mask_uncorrect & mask_known).squeeze(0)
 
-                    uncertain_uncorr = entropy.reshape(-1)[mask_total.reshape(-1)]
-                    uncert_mode = torch.mode(uncertain_uncorr, dim=0)[0].item()
-                    score_unc = -torch.abs(entropy - uncert_mode)
-                    score_unc[~mask_uncorrect.squeeze(0)] = -float('inf')
+                    # uncertain_uncorr = entropy.reshape(-1)[mask_total.reshape(-1)]
+                    # uncert_mode = torch.mode(uncertain_uncorr, dim=0)[0].item()
+                    # score_unc = -torch.abs(entropy - uncert_mode)
+                    # score_unc[~mask_uncorrect.squeeze(0)] = -float('inf')
 
                     score_unc = score_unc * impurity
-                    
-
-
                     score_unc[active] = -float('inf')
 
                     weight_uncert = cfg.ACTIVE.WEIGHT_UNCERT[round_number-1]

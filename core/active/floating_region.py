@@ -10,7 +10,7 @@ from core.configs import cfg
 
 class FloatingRegionScore(nn.Module):
 
-    def __init__(self, in_channels=19, padding_mode='zeros', size=33):
+    def __init__(self, in_channels=19, padding_mode='zeros', size=33, purity_type=None, K=100):
         """
         purity_conv: size*size
         entropy_conv: size*size
@@ -19,7 +19,12 @@ class FloatingRegionScore(nn.Module):
         self.in_channels = in_channels
         assert size % 2 == 1, "error size"
 
-        if cfg.ACTIVE.PURITY == 'ripu':
+        if purity_type is None:
+            purity_type = cfg.ACTIVE.PURITY
+        else:
+            purity_type = purity_type
+
+        if purity_type == 'ripu':
             self.purity_conv = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=size,
                                         stride=1, padding=int(size / 2), bias=False,
                                         padding_mode=padding_mode, groups=in_channels)
@@ -29,8 +34,8 @@ class FloatingRegionScore(nn.Module):
             weight = nn.Parameter(weight)
             self.purity_conv.weight = weight
             self.purity_conv.requires_grad_(False)
-        elif cfg.ACTIVE.PURITY == 'hyper':
-            self.K = 100
+        elif purity_type == 'hyper':
+            self.K = K
             self.purity_conv = nn.Conv2d(in_channels=self.K, out_channels=self.K, kernel_size=3,
                                         stride=1, padding=int(3 / 2), bias=False,
                                         padding_mode='zeros', groups=self.K)
@@ -150,3 +155,42 @@ class FloatingRegionScore(nn.Module):
         score = region_impurity * prediction_uncertainty
         return score.squeeze(dim=0).squeeze(dim=0), region_impurity.squeeze(dim=0).squeeze(
             dim=0), prediction_uncertainty.squeeze(dim=0).squeeze(dim=0)
+    
+
+
+'''
+EPS = 1e-5
+K = 200
+in_channels = K
+self.purity_conv = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=3,
+                            stride=1, padding=int(3 / 2), bias=False,
+                            padding_mode='zeros', groups=in_channels)
+weight = torch.ones((3, 3), dtype=torch.float32)
+weight = weight.unsqueeze(dim=0).unsqueeze(dim=0)
+weight = weight.repeat([in_channels, 1, 1, 1])
+weight = nn.Parameter(weight)
+self.purity_conv.weight = weight
+self.purity_conv.requires_grad_(False)
+self.purity_conv = self.purity_conv.to(predict.device)
+
+
+predict = (decoder_out.squeeze(0).norm(dim=0) * K) - 0.5  # [h, w]
+predict = torch.clamp(predict, min=-0.5+EPS, max=K-0.5-EPS)
+predict = torch.round(predict).long()
+region_impurity, count = self.compute_region_impurity(predict, K, normalize)
+region_impurity = (region_impurity - region_impurity.min().item()) / (region_impurity.max().item() - region_impurity.min().item())
+score = region_impurity * prediction_uncertainty
+
+fig, axes = plt.subplots(1, 2, constrained_layout = True) # constrained_layout = True
+axes[0].imshow(region_impurity.squeeze(0).squeeze(0).cpu())
+axes[0].xaxis.set_visible(False)
+axes[0].yaxis.set_visible(False)
+axes[0].set_title('hyper_impurity')
+axes[1].imshow(score.squeeze(0).squeeze(0).cpu())
+axes[1].xaxis.set_visible(False)
+axes[1].yaxis.set_visible(False)
+axes[1].set_title('hyper_impurity*hyper_certainty')
+fig.suptitle('new score with K='+str(K))
+plt.savefig('debug_'+str(K)+'.png')
+plt.close()
+'''
