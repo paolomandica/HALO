@@ -125,6 +125,7 @@ wandb
 artifacts
 datasets/gtav
 datasets/cityscapes
+datasets/synthia
 results
 checkpoints
 scripts/train_scripts_luca.sh
