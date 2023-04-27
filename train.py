@@ -86,20 +86,25 @@ def main():
         mode="max",
         dirpath=cfg.OUTPUT_DIR,
         filename="model_{global_step}_{mIoU:.2f}",
+        save_last=True,
     )
 
-    checkcall_2 = PeriodicCheckpoint(
-        dirpath=cfg.OUTPUT_DIR,
-        every=cfg.SOLVER.CHECKPOINT_PERIOD,
-    )
+    # checkcall_2 = PeriodicCheckpoint(
+    #     dirpath=cfg.OUTPUT_DIR,
+    #     every=cfg.SOLVER.CHECKPOINT_PERIOD,
+    # )
 
-    callbacks = [checkcall_1, checkcall_2]
+    callbacks = [checkcall_1]
 
     if cfg.PROTOCOL in ['source_target', 'source_free']:
-        checkcall_3 = ActiveRoundCheckpoint(
+        checkcall_2 = ModelCheckpoint(
+            save_top_k=-1,
+            monitor="active_round",
+            mode="max",
             dirpath=cfg.OUTPUT_DIR,
+            filename="model_{global_step}_{active_round}",
         )
-        callbacks.append(checkcall_3)
+        callbacks.append(checkcall_2)
 
     # init trainer
     trainer = pl.Trainer(
