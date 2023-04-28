@@ -24,6 +24,7 @@ class PeriodicCheckpoint(ModelCheckpoint):
         super().__init__()
         self.dirpath = dirpath
         self.every = every
+        self.filename = "model_{global_step}"
 
     def on_train_batch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule, *args, **kwargs):
         if (pl_module.global_step + 1) % self.every == 0:
@@ -86,7 +87,6 @@ def main():
         mode="max",
         dirpath=cfg.OUTPUT_DIR,
         filename="model_{global_step}_{mIoU:.2f}",
-        save_last=True,
     )
 
     # checkcall_2 = PeriodicCheckpoint(
@@ -97,12 +97,17 @@ def main():
     callbacks = [checkcall_1]
 
     if cfg.PROTOCOL in ['source_target', 'source_free']:
-        checkcall_2 = ModelCheckpoint(
-            save_top_k=-1,
-            monitor="active_round",
-            mode="max",
+        # checkcall_2 = ModelCheckpoint(
+        #     save_top_k=-1,
+        #     monitor="active_round",
+        #     mode="max",
+        #     dirpath=cfg.OUTPUT_DIR,
+        #     filename="model_{global_step}_{active_round}",
+        # )
+        # save checkpoint every 5000 steps
+        checkcall_2 = PeriodicCheckpoint(
             dirpath=cfg.OUTPUT_DIR,
-            filename="model_{global_step}_{active_round}",
+            every=cfg.SOLVER.CHECKPOINT_PERIOD,
         )
         callbacks.append(checkcall_2)
 
