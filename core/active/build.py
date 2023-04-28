@@ -121,6 +121,9 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
 
     floating_region_score = FloatingRegionScore(
         in_channels=cfg.MODEL.NUM_CLASSES, size=2 * cfg.ACTIVE.RADIUS_K + 1, purity_type=cfg.ACTIVE.PURITY, K=cfg.ACTIVE.K)
+    if cfg.ACTIVE.UNCERTAINTY == 'certuncert':
+        floating_region_score_cert = FloatingRegionScore(
+            in_channels=cfg.MODEL.NUM_CLASSES, size=2 * cfg.ACTIVE.RADIUS_K + 1, purity_type='ripu')
     per_region_pixels = (2 * cfg.ACTIVE.RADIUS_K + 1) ** 2
     active_radius = cfg.ACTIVE.RADIUS_K
     mask_radius = cfg.ACTIVE.MASK_RADIUS_K
@@ -170,12 +173,14 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                     decoder_out = decoder_out[i:i + 1, :, :, :]
                     decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
 
-                    score_unc, purity, uncertainty = floating_region_score(
-                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='entropy', pur_type='ripu', alpha=alpha)
+                    score_unc, _, _ = floating_region_score(
+                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='entropy', pur_type='hyper', alpha=alpha)
                     
-                    score_cert, purity, uncertainty = floating_region_score(
+                    score_cert, _, _ = floating_region_score_cert(
                         output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='certainty', pur_type='ripu', alpha=alpha)
 
+                    score_unc_clone = score_unc.clone()
+                    score_cert_clone = score_cert.clone()
                     score_unc[active] = -float('inf')
 
                     weight_uncert = cfg.ACTIVE.WEIGHT_UNCERT[round_number-1]
@@ -239,13 +244,14 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                     output = tgt_out[i:i + 1, :, :, :]
                     output = F.interpolate(output, size=size, mode='bilinear', align_corners=True)
 
-                    if uncertainty_type in ['certainty', 'hyperbolic'] or (uncertainty_type == 'none' and cfg.MODEL.HYPER) or (cfg.ACTIVE.ALPHA and cfg.MODEL.HYPER):
+                    if uncertainty_type in ['certainty', 'hyperbolic'] or (purity_type == 'hyper') or (uncertainty_type == 'none' and cfg.MODEL.HYPER) or (cfg.ACTIVE.ALPHA and cfg.MODEL.HYPER):
                         decoder_out = decoder_out[i:i + 1, :, :, :]
                         decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
 
                     score, purity, uncertainty = floating_region_score(
                         output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type=uncertainty_type, pur_type=purity_type, alpha=alpha)
 
+                    score_clone = score.clone()
                     score[active] = -float('inf')
 
                     active_regions = math.ceil(num_pixel_cur * active_ratio / per_region_pixels)
@@ -293,11 +299,11 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                 # active_mask_np = F.interpolate(torch.Tensor(active_mask_np).unsqueeze(0).unsqueeze(0), size=torch.Size(img_np.shape[:2]), mode='bilinear', align_corners=True)
                 # active_mask_np = active_mask_np.cpu().numpy().squeeze(0).squeeze(0)
                 if cfg.ACTIVE.UNCERTAINTY != 'certuncert':
-                    score_np = score.cpu().numpy()
+                    score_np = score_clone.cpu().numpy()
                     visualization_plots(img_np, score_np, active_mask_np, round_number, name)
                 else:
-                    score_unc_np = score_unc.cpu().numpy()
-                    score_cert_np = score_cert.cpu().numpy()
+                    score_unc_np = score_unc_clone.cpu().numpy()
+                    score_cert_np = score_cert_clone.cpu().numpy()
                     name_unc = name.rsplit('_', 1)[0]+'_unc_'+name.rsplit('_', 1)[1]
                     visualization_plots(img_np, score_unc_np, active_mask_unc_np, round_number, name_unc)
                     name_cert = name.rsplit('_', 1)[0]+'_cert_'+name.rsplit('_', 1)[1]
