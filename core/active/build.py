@@ -181,6 +181,7 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
 
                     score_unc_clone = score_unc.clone()
                     score_cert_clone = score_cert.clone()
+
                     score_unc[active] = -float('inf')
 
                     weight_uncert = cfg.ACTIVE.WEIGHT_UNCERT[round_number-1]
@@ -212,7 +213,7 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                         active_mask_unc = active_mask.clone()
                         
                     score_cert[active] = -float('inf')
-                    active_regions = math.ceil((1-weight_uncert) * ((num_pixel_cur * active_ratio) / per_region_pixels))
+                    active_regions = math.floor((1-weight_uncert) * ((num_pixel_cur * active_ratio) / per_region_pixels))
                     active_mask_cert = torch.zeros_like(active_mask)
                     for pixel in range(active_regions):
                         values, indices_h = torch.max(score_cert, dim=0)
@@ -305,16 +306,16 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                     score_unc_np = score_unc_clone.cpu().numpy()
                     score_cert_np = score_cert_clone.cpu().numpy()
                     name_unc = name.rsplit('_', 1)[0]+'_unc_'+name.rsplit('_', 1)[1]
-                    visualization_plots(img_np, score_unc_np, active_mask_unc_np, round_number, name_unc)
+                    visualization_plots(img_np, score_unc_np, active_mask_unc_np, round_number, name_unc, title='Hyper Impurity + Entropy')
                     name_cert = name.rsplit('_', 1)[0]+'_cert_'+name.rsplit('_', 1)[1]
-                    visualization_plots(img_np, score_cert_np, active_mask_cert_np, round_number, name_cert)
+                    visualization_plots(img_np, score_cert_np, active_mask_cert_np, round_number, name_cert, title='Impurity + Certainty')
             idx += 1
 
     feature_extractor.train()
     classifier.train()
 
 
-def visualization_plots(img_np, score_np, active_mask_np, round_number, name, cmap1='gray', cmap2='viridis', alpha=0.7):
+def visualization_plots(img_np, score_np, active_mask_np, round_number, name, cmap1='gray', cmap2='viridis', alpha=0.7, title=None):
 
     fig, axes = plt.subplots(3, 1, constrained_layout=True, figsize=(10, 10))
 
@@ -324,17 +325,18 @@ def visualization_plots(img_np, score_np, active_mask_np, round_number, name, cm
     axes[0].xaxis.set_visible(False)
     axes[0].yaxis.set_visible(False)
 
-    if cfg.ACTIVE.UNCERTAINTY == 'entropy':
-        title = 'Entropy + '
-    elif cfg.ACTIVE.UNCERTAINTY == 'hyperbolic':
-        title = 'Hyperbolic Uncertainty + '
-    elif cfg.ACTIVE.UNCERTAINTY == 'certainty':
-        title = 'Hyperbolic Certainty + '
-    else:
-        title = ''
+    if title is None:
+        if cfg.ACTIVE.UNCERTAINTY == 'entropy':
+            title = 'Entropy + '
+        elif cfg.ACTIVE.UNCERTAINTY == 'hyperbolic':
+            title = 'Hyperbolic Uncertainty + '
+        elif cfg.ACTIVE.UNCERTAINTY == 'certainty':
+            title = 'Hyperbolic Certainty + '
+        else:
+            title = ''
 
-    if cfg.ACTIVE.PURITY == 'ripu':
-        title += 'Impurity'
+        if cfg.ACTIVE.PURITY == 'ripu':
+            title += 'Impurity'
 
     axes[1].set_title('Total Score: '+title)
     axes[1].imshow(img_np, cmap=cmap1)
