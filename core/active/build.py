@@ -1,9 +1,11 @@
 import math
 import torch
 import random
+import copy
 
 import numpy as np
 import torch.nn.functional as F
+from kmeans_pytorch import kmeans
 
 from joblib import Parallel, delayed
 from PIL import Image
@@ -114,7 +116,7 @@ def PixelSelection(cfg, feature_extractor, classifier, tgt_epoch_loader):
     classifier.train()
 
 
-def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_number):
+def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, val_epoch_loader, round_number):
 
     feature_extractor.eval()
     classifier.eval()
@@ -132,6 +134,36 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
     purity_type = cfg.ACTIVE.PURITY
     alpha = cfg.ACTIVE.ALPHA
 
+    
+    if cfg.ACTIVE.QUANT == 'kmeans':
+        with torch.no_grad():
+            device = torch.device('cuda:0')
+
+            feature_extractor2 = copy.deepcopy(feature_extractor).to(device)
+            classifier2 = copy.deepcopy(classifier).to(device)
+            
+            embed_norm_tensor = torch.empty(0, 160, 320).to(device)
+            for tgt_data in tqdm(val_epoch_loader):
+                tgt_input = tgt_data['img']
+                tgt_input = tgt_input.to(device)
+                tgt_size = tgt_input.shape[-2:]
+                tgt_feat = feature_extractor2(tgt_input)
+                if not cfg.MODEL.HYPER:
+                    tgt_out = classifier2(tgt_feat, size=tgt_size)
+                    decoder_out = None
+                else:
+                    tgt_out, decoder_out = classifier2(tgt_feat, size=tgt_size)
+                embed_norm_tensor = torch.cat((embed_norm_tensor, decoder_out.norm(dim=1)), dim=0)
+
+            x = embed_norm_tensor.reshape(-1,1)
+            _, cluster_centers = kmeans(X=x, num_clusters=cfg.ACTIVE.K, distance='euclidean', device=device)
+        
+            del embed_norm_tensor, x, feature_extractor2, classifier2
+            torch.cuda.empty_cache()
+
+
+
+
     with torch.no_grad():
         idx = 0
         for tgt_data in tqdm(tgt_epoch_loader):
@@ -144,6 +176,10 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
             path2indicator = tgt_data['path_to_indicator']
 
             tgt_input = tgt_input.cuda(non_blocking=True)
+
+            if idx == 0:
+                feature_extractor.to(tgt_input.device)
+                classifier.to(tgt_input.device)
 
             tgt_size = tgt_input.shape[-2:]
             tgt_feat = feature_extractor(tgt_input)
@@ -174,10 +210,10 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                     decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
 
                     score_unc, _, _ = floating_region_score(
-                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='entropy', pur_type='hyper', alpha=alpha)
+                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='entropy', pur_type='hyper', cluster_centers=cluster_centers)
                     
                     score_cert, _, _ = floating_region_score_cert(
-                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='certainty', pur_type='ripu', alpha=alpha)
+                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='certainty', pur_type='ripu')
 
                     score_unc_clone = score_unc.clone()
                     score_cert_clone = score_cert.clone()
@@ -250,7 +286,7 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                         decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
 
                     score, purity, uncertainty = floating_region_score(
-                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type=uncertainty_type, pur_type=purity_type, alpha=alpha)
+                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type=uncertainty_type, pur_type=purity_type, cluster_centers=cluster_centers)
 
                     score_clone = score.clone()
                     score[active] = -float('inf')

@@ -1,5 +1,6 @@
 import math
 from typing import Optional
+import json
 
 import torch
 import torch.nn as nn
@@ -73,6 +74,30 @@ class FloatingRegionScore(nn.Module):
             region_uncertainty = (region_uncertainty - region_uncertainty.min().item()) / (region_uncertainty.max().item() - region_uncertainty.min().item())
         return region_uncertainty
     
+
+    def quantize_uncert_map(self, decoder_out, type='kmeans', cluster_centers=None):
+
+        assert type in ['uniform', 'kmeans'], "type '{}' not implemented".format(type)
+
+        if type == 'uniform':
+            EPS = 1e-5
+            predict = (decoder_out.squeeze(0).norm(dim=0) * self.K) - 0.5  # [h, w]
+            predict = torch.clamp(predict, min=-0.5+EPS, max=self.K-0.5-EPS)
+            predict = torch.round(predict).long()
+            return predict
+        elif type == 'kmeans':
+            if cluster_centers is None:
+                kmeans_dict = json.load(open('kmeans/kmeans_dict.json', 'r'))
+                checkpoint = kmeans_dict.values()[-1]
+                cluster_centers = torch.Tensor(kmeans_dict[checkpoint])
+
+            predict = decoder_out.squeeze(0).norm(dim=0)
+            predict_flatten = predict.reshape(-1,1)
+            cluster_ids_sorted = torch.cdist(predict_flatten.reshape(1,-1, 1).float(), cluster_centers.reshape(1,-1, 1).float().to(predict_flatten.device))
+            _, indices = cluster_ids_sorted.squeeze(0).min(dim=-1)
+            return indices.reshape(decoder_out.shape[-2:]).long()
+
+    
     def compute_region_impurity(self, predict, K, normalize=False):
         
         one_hot = F.one_hot(predict, num_classes=K).float()
@@ -88,7 +113,7 @@ class FloatingRegionScore(nn.Module):
 
         return region_impurity, count
 
-    def forward(self, logit: torch.Tensor, decoder_out: torch.Tensor = None, unc_type: str = None, pur_type: str = None, normalize: bool = False, alpha: float = None):
+    def forward(self, logit: torch.Tensor, decoder_out: torch.Tensor = None, unc_type: str = None, pur_type: str = None, normalize: bool = False, alpha: float = None, cluster_centers=None):
         """
         Compute regions score, impurity and uncertainty.
 
@@ -136,11 +161,12 @@ class FloatingRegionScore(nn.Module):
             # dist = summary / count
             # region_impurity = torch.sum(-dist * torch.log(dist + 1e-6), dim=1, keepdim=True) / math.log(19)
         elif pur_type == 'hyper':
-            EPS = 1e-5
-            # predict = decoder_out.squeeze(0).norm(dim=0) * (K-1)  # [h, w]
-            predict = (decoder_out.squeeze(0).norm(dim=0) * self.K) - 0.5  # [h, w]
-            predict = torch.clamp(predict, min=-0.5+EPS, max=self.K-0.5-EPS)
-            predict = torch.round(predict).long()
+            # EPS = 1e-5
+            # predict = (decoder_out.squeeze(0).norm(dim=0) * self.K) - 0.5  # [h, w]
+            # predict = torch.clamp(predict, min=-0.5+EPS, max=self.K-0.5-EPS)
+            # predict = torch.round(predict).long()
+            predict = self.quantize_uncert_map(decoder_out, type=cfg.ACTIVE.QUANT, cluster_centers=cluster_centers)
+
             region_impurity, count = self.compute_region_impurity(predict, self.K, normalize)
         elif pur_type == 'none':
             region_impurity = torch.zeros((1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32).cuda()
