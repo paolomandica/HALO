@@ -162,6 +162,8 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, val_ep
             embed_norm_tensor = embed_norm_tensor.reshape(-1, 1)
             _, cluster_centers = kmeans(X=embed_norm_tensor, num_clusters=cfg.ACTIVE.K,
                                         distance='euclidean', device=embed_norm_tensor.device)
+    else:
+        cluster_centers = None
             
 
 

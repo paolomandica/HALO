@@ -40,7 +40,7 @@ _C.DATASETS.TARGET_TRAIN = ""
 _C.DATASETS.TEST = ""
 
 _C.SOLVER = CN()
-_C.SOLVER.GPUS = [0]
+_C.SOLVER.GPUS = [0,1,2,3]
 _C.SOLVER.NUM_ITER = 60000
 # _C.SOLVER.STOP_ITER = 40000
 _C.SOLVER.CHECKPOINT_PERIOD = 1000
@@ -56,7 +56,7 @@ _C.SOLVER.BATCH_SIZE = 2
 _C.SOLVER.BATCH_SIZE_VAL = 1
 
 # hyper-parameters
-_C.SOLVER.CONSISTENT_LOSS = 0.1
+_C.SOLVER.CONSISTENT_LOSS = 0.
 _C.SOLVER.NEGATIVE_LOSS = 1.0
 _C.SOLVER.NEGATIVE_THRESHOLD = 0.05
 
@@ -69,9 +69,9 @@ _C.ACTIVE = CN()
 # active strategy
 _C.ACTIVE.NAME = 'AL-RIPU'
 _C.ACTIVE.UNCERTAINTY = 'entropy'
-_C.ACTIVE.PURITY = 'ripu'
+_C.ACTIVE.PURITY = 'hyper'
 _C.ACTIVE.SETTING = 'RA'
-_C.ACTIVE.SELECT_ITER = [10000, 12000, 14000, 16000, 18000] # for 5 selection rounds
+_C.ACTIVE.SELECT_ITER = [0, 15001, 30001, 40001, 50001] # for 5 selection rounds
 # total selection ratio per image
 _C.ACTIVE.RATIO = 0.022
 # total selected pixel per image
@@ -81,7 +81,10 @@ _C.ACTIVE.RADIUS_K = 1
 # selected pixel visualization
 _C.ACTIVE.VIZ_MASK = True
 _C.ACTIVE.ALPHA = None
-_C.ACTIVE.NORMALIZE = False
+_C.ACTIVE.NORMALIZE = True
+_C.ACTIVE.MASK_RADIUS_K = 5
+_C.ACTIVE.K = 100
+_C.ACTIVE.QUANT = 'uniform'
 
 
 # ---------------------------------------------------------------------------- #
@@ -99,4 +102,4 @@ _C.checkpoint = ""
 _C.PREPARE_DIR = ""
 _C.SEED = -1
 _C.DEBUG = 0
-_C.PROTOCOL = "source_free"
+_C.PROTOCOL = "source_target"
