@@ -74,10 +74,9 @@ def main():
     elif cfg.PROTOCOL == 'source_free':
         learner = SourceFreeLearner(cfg)
     elif cfg.PROTOCOL == 'source_target':
-        if cfg.ACTIVE.RATIO == 1.:
-            learner = FullySupervisedLearner(cfg)
-        else:
-            learner = SourceTargetLearner(cfg)
+        learner = SourceTargetLearner(cfg)
+    elif cfg.PROTOCOL == 'fully_sup':
+        learner = FullySupervisedLearner(cfg)
     else:
         raise NotImplementedError(f'Protocol {cfg.PROTOCOL} is not implemented.')
 

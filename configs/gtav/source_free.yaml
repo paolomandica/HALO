@@ -3,7 +3,7 @@ MODEL:
   WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
   FREEZE_BN: True
   HYPER: True
-  REDUCED_CHANNELS: 64      # 256 or 10
+  REDUCED_CHANNELS: 64
   WEIGHTED_NORM: True
 DATASETS:
   SOURCE_TRAIN: "gtav_train"
@@ -20,7 +20,6 @@ SOLVER:
   NUM_ITER: 60000
   CHECKPOINT_PERIOD: 5000
   BATCH_SIZE: 2
-  CONSISTENT_LOSS: 0.
 ACTIVE:
   NAME: 'AL-RIPU'
   SETTING: 'RA'
@@ -31,15 +30,14 @@ ACTIVE:
   PURITY: 'hyper'             # 'ripu' or 'hyper' or 'none'
   VIZ_MASK: True
   NORMALIZE: True
-  WEIGHT_UNCERT: [1., .9, .7, .5, .3]
+  WEIGHT_UNCERT: [0.2, 0.2, 0.35, 0.35, 0.5]
   MASK_RADIUS_K: 5
-  K: 100
-  QUANT: 'kmeans'
+  K: 200
 WANDB:
   ENABLE: True
   PROJECT: 'active_domain_adapt'
-  NAME: 'hyper_dlv3_64_WN_5_perc_hyperimp_entr_kmeans'
-  GROUP: 'source_target'
+  NAME: 'hyper_dlv3_64_WN_5_perc_entr_hyperimp_K200_RK5'
+  GROUP: 'source_free'
   ENTITY: 'pinlab-sapienza'
 TEST:
   VIZ_SCORE: False
@@ -47,6 +45,6 @@ TEST:
 TEST:
   BATCH_SIZE: 1
 resume: 'results/pretrain/hyper_v3plus_ch_64_WN/model_global_step=25998.0_mIoU=38.99.ckpt'
-OUTPUT_DIR: 'results/source_target/hyper_dlv3_64_WN_5_perc_hyperimp_entr_kmeans'
+OUTPUT_DIR: 'results/source_free/hyper_dlv3_64_WN_5_perc_entr_hyperimp_K200_RK5'
 DEBUG: 0
-PROTOCOL: 'source_target'   # source | source_target | source_free
+PROTOCOL: 'source_free'

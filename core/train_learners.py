@@ -483,7 +483,6 @@ class FullySupervisedLearner(SourceFreeLearner):
         self.local_consistent_loss = LocalConsistentLoss(cfg.MODEL.NUM_CLASSES, cfg.SOLVER.LCR_TYPE)
 
         # remove active learning dataloader
-        active_set = None
         self.active_loader = None
         self.active_round = 0
 
