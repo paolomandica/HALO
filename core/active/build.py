@@ -130,11 +130,15 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
     feature_extractor.eval()
     classifier.eval()
 
-    floating_region_score = FloatingRegionScore(
-        in_channels=cfg.MODEL.NUM_CLASSES, size=2 * cfg.ACTIVE.RADIUS_K + 1, purity_type=cfg.ACTIVE.PURITY, K=cfg.ACTIVE.K)
     if cfg.ACTIVE.UNCERTAINTY == 'certuncert':
         floating_region_score_cert = FloatingRegionScore(
-            in_channels=cfg.MODEL.NUM_CLASSES, size=2 * cfg.ACTIVE.RADIUS_K + 1, purity_type='ripu')
+            in_channels=cfg.MODEL.NUM_CLASSES, size=2 * cfg.ACTIVE.RADIUS_K + 1,
+            purity_type=cfg.ACTIVE.PURITY, K=cfg.ACTIVE.K)
+    else:
+        floating_region_score = FloatingRegionScore(
+            in_channels=cfg.MODEL.NUM_CLASSES, size=2 * cfg.ACTIVE.RADIUS_K + 1,
+            purity_type=cfg.ACTIVE.PURITY, K=cfg.ACTIVE.K)
+        
     per_region_pixels = (2 * cfg.ACTIVE.RADIUS_K + 1) ** 2
     active_radius = cfg.ACTIVE.RADIUS_K
     mask_radius = cfg.ACTIVE.MASK_RADIUS_K
@@ -215,10 +219,10 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                         decoder_out, size=size, mode='bilinear', align_corners=True)
 
                     score_unc, _, _ = floating_region_score(
-                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='entropy', pur_type='hyper', cluster_centers=cluster_centers)
+                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='entropy', pur_type=purity_type, cluster_centers=cluster_centers)
 
                     score_cert, _, _ = floating_region_score_cert(
-                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='certainty', pur_type='ripu')
+                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='certainty', pur_type=purity_type)
 
                     score_unc_clone = score_unc.clone()
                     score_cert_clone = score_cert.clone()

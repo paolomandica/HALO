@@ -162,10 +162,10 @@ class BaseLearner(pl.LightningModule):
         mAcc = accuracy_class.mean() * 100
         aAcc = intersections.sum() / (targets.sum() + 1e-10) * 100
 
-        # print metrics table style
-        print('\nmIoU: {:.2f}'.format(mIoU))
-        print('mAcc: {:.2f}'.format(mAcc))
-        print('aAcc: {:.2f}\n'.format(aAcc))
+        # self.print metrics table style
+        self.print('\nmIoU: {:.2f}'.format(mIoU))
+        self.print('mAcc: {:.2f}'.format(mAcc))
+        self.print('aAcc: {:.2f}\n'.format(aAcc))
 
         # log metrics
         self.log('mIoU', mIoU, on_step=False, on_epoch=True, sync_dist=True, prog_bar=True)
@@ -284,15 +284,18 @@ class SourceFreeLearner(BaseLearner):
     def compute_active_iters(self):
         denom = self.cfg.SOLVER.NUM_ITER * self.cfg.SOLVER.BATCH_SIZE * len(self.cfg.SOLVER.GPUS)
         self.active_iters = [int(x*self.data_len/denom) for x in self.cfg.ACTIVE.SELECT_ITER]
-        print("\nActive learning at iters: {}\n".format(self.active_iters))
-        self.active_iters = [x * self.cfg.SOLVER.BATCH_SIZE for x in self.active_iters]
+        self.print("\nActive learning at iters: {}\n".format(self.active_iters))
+        # self.active_iters = [x * self.cfg.SOLVER.BATCH_SIZE for x in self.active_iters]
 
     def on_train_start(self):
         self.compute_active_iters()
 
     def on_train_batch_start(self, batch, batch_idx):
-        if self.trainer.is_global_zero and self.global_step in self.active_iters and not self.debug:
-            print(">>>>>>>>>>>>>>>> Active Round {} >>>>>>>>>>>>>>>>".format(self.active_round))
+        if self.local_rank == 0 and batch_idx in self.active_iters and not self.debug:
+            print(f">>>>>>>>>>>>>>>> Active Round {self.active_round} >>>>>>>>>>>>>>>>")
+            print(f"batch_idx: {batch_idx}, self.local_rank: {self.local_rank}")
+            print()
+
             if self.cfg.ACTIVE.SETTING == "RA":
                 RegionSelection(cfg=self.cfg,
                                 feature_extractor=self.feature_extractor,
@@ -452,8 +455,8 @@ class SourceTargetLearner(SourceFreeLearner):
         target_set = build_dataset(self.cfg, mode='train', is_source=False)
         self.data_len = len(source_set)
         self.target_len = len(target_set)
-        print('source data length: ', self.data_len)
-        print('target data length: ', self.target_len)
+        self.print('source data length: ', self.data_len)
+        self.print('target data length: ', self.target_len)
         source_loader = DataLoader(
             dataset=source_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
@@ -549,8 +552,8 @@ class FullySupervisedLearner(SourceFreeLearner):
         target_set = build_dataset(self.cfg, mode='train', is_source=False)
         self.data_len = len(source_set)
         self.target_len = len(target_set)
-        print('source data length: ', self.data_len)
-        print('target data length: ', self.target_len)
+        self.print('source data length: ', self.data_len)
+        self.print('target data length: ', self.target_len)
         source_loader = DataLoader(
             dataset=source_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
@@ -639,11 +642,11 @@ class Test(BaseLearner):
         mAcc = round(accuracy_class.mean() * 100, 2)
         aAcc = round(intersections.sum() / (targets.sum() + 1e-10) * 100, 2)
 
-        # print metrics table style
-        print()
-        print('mIoU: {:.2f}'.format(mIoU))
-        print('mAcc: {:.2f}'.format(mAcc))
-        print('aAcc: {:.2f}\n'.format(aAcc))
+        # self.print metrics table style
+        self.print()
+        self.print('mIoU: {:.2f}'.format(mIoU))
+        self.print('mAcc: {:.2f}'.format(mAcc))
+        self.print('aAcc: {:.2f}\n'.format(aAcc))
 
         # log metrics
         self.log('mIoU', mIoU, on_step=False, on_epoch=True, sync_dist=False, prog_bar=True)
