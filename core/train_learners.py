@@ -641,11 +641,23 @@ class Test(BaseLearner):
         mAcc = round(accuracy_class.mean() * 100, 2)
         aAcc = round(intersections.sum() / (targets.sum() + 1e-10) * 100, 2)
 
+        # print IoU per class
+        print('\n\n')
+        print('{:<20}  {:<20}  {:<20}'.format('Class', 'IoU (%)', 'Accuracy (%)'))
+        for i in range(cfg.MODEL.NUM_CLASSES):
+            print('{:<20}  {:<20.2f}  {:<20.2f}'.format(self.class_names[i], iou_class[i] * 100, accuracy_class[i] * 100))
+
+        # print mIoUs in LateX format
+        print('\n\n')
+        delimiter = ' & '
+        latex_iou_class = delimiter.join(map(lambda x: '{:.1f}'.format(x), iou_class))
+        print(latex_iou_class)
+
         # print metrics table style
         print()
-        print('mIoU: {:.2f}'.format(mIoU))
-        print('mAcc: {:.2f}'.format(mAcc))
-        print('aAcc: {:.2f}\n'.format(aAcc))
+        print('mIoU:\t {:.2f}'.format(mIoU))
+        print('mAcc:\t {:.2f}'.format(mAcc))
+        print('aAcc:\t {:.2f}\n'.format(aAcc))
 
         # log metrics
         self.log('mIoU', mIoU, on_step=False, on_epoch=True, sync_dist=False, prog_bar=True)
@@ -654,11 +666,12 @@ class Test(BaseLearner):
 
     def test_dataloader(self):
         test_set = build_dataset(self.cfg, mode='test', is_source=False)
+        self.class_names = test_set.trainid2name
         test_loader = DataLoader(
             dataset=test_set,
             batch_size=1,
             shuffle=False,
-            num_workers=2,
+            num_workers=8,
             pin_memory=True,
             drop_last=False,)
         return test_loader
