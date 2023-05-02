@@ -125,7 +125,7 @@ def PixelSelection(cfg, feature_extractor, classifier, tgt_epoch_loader):
     classifier.train()
 
 
-def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, val_epoch_loader, round_number):
+def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_number):
 
     feature_extractor.eval()
     classifier.eval()
@@ -146,7 +146,7 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, val_ep
     if cfg.ACTIVE.QUANT == 'kmeans':
         with torch.no_grad():
             embed_norm_tensor = torch.empty(0, 160, 320).cuda()
-            for tgt_data in tqdm(val_epoch_loader):
+            for tgt_data in tqdm(tgt_epoch_loader):
                 tgt_input = tgt_data['img']
                 tgt_input = tgt_input.cuda(non_blocking=True)
                 tgt_size = tgt_input.shape[-2:]
