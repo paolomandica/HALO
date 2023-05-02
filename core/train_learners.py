@@ -162,10 +162,10 @@ class BaseLearner(pl.LightningModule):
         mAcc = accuracy_class.mean() * 100
         aAcc = intersections.sum() / (targets.sum() + 1e-10) * 100
 
-        # self.print metrics table style
-        self.print('\nmIoU: {:.2f}'.format(mIoU))
-        self.print('mAcc: {:.2f}'.format(mAcc))
-        self.print('aAcc: {:.2f}\n'.format(aAcc))
+        # print metrics table style
+        print('\nmIoU: {:.2f}'.format(mIoU))
+        print('mAcc: {:.2f}'.format(mAcc))
+        print('aAcc: {:.2f}\n'.format(aAcc))
 
         # log metrics
         self.log('mIoU', mIoU, on_step=False, on_epoch=True, sync_dist=True, prog_bar=True)
@@ -641,11 +641,11 @@ class Test(BaseLearner):
         mAcc = round(accuracy_class.mean() * 100, 2)
         aAcc = round(intersections.sum() / (targets.sum() + 1e-10) * 100, 2)
 
-        # self.print metrics table style
-        self.print()
-        self.print('mIoU: {:.2f}'.format(mIoU))
-        self.print('mAcc: {:.2f}'.format(mAcc))
-        self.print('aAcc: {:.2f}\n'.format(aAcc))
+        # print metrics table style
+        print()
+        print('mIoU: {:.2f}'.format(mIoU))
+        print('mAcc: {:.2f}'.format(mAcc))
+        print('aAcc: {:.2f}\n'.format(aAcc))
 
         # log metrics
         self.log('mIoU', mIoU, on_step=False, on_epoch=True, sync_dist=False, prog_bar=True)
