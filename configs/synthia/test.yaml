@@ -1,0 +1,27 @@
+MODEL:
+  NAME: "deeplabv3plus_resnet101"
+  WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
+  FREEZE_BN: True
+  HYPER: True
+  REDUCED_CHANNELS: 64      # 256 or 10
+  WEIGHTED_NORM: True
+DATASETS:
+  SOURCE_TRAIN: "synthia_train"
+  TARGET_TRAIN: "cityscapes_train"
+  TEST: "cityscapes_val"
+INPUT:
+  SOURCE_INPUT_SIZE_TRAIN: (1280, 720)
+  TARGET_INPUT_SIZE_TRAIN: (1280, 640)
+  INPUT_SIZE_TEST: (1280, 640)
+ACTIVE:
+  NAME: 'AL-RIPU'
+SOLVER:
+  GPUS: [0]
+TEST:
+  VIZ_SCORE: False
+  VIZ_WRONG: False
+  SAVE_EMBED: True
+  BATCH_SIZE: 1
+resume: 'model.ckpt'
+OUTPUT_DIR: 'test_results'
+DEBUG: 0
