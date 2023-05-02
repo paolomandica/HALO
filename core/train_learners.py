@@ -272,16 +272,6 @@ class SourceFreeLearner(BaseLearner):
             num_workers=4,
             pin_memory=True,
             drop_last=False,)
-        
-        val_set = build_dataset(self.cfg, mode='test', is_source=True)
-        self.val_loader = DataLoader(
-            dataset=val_set,
-            batch_size=self.cfg.TEST.BATCH_SIZE,
-            shuffle=False,
-            num_workers=4,
-            pin_memory=True,
-            drop_last=False,
-            persistent_workers=True,)
 
         # init mask for cityscape
         if 'LOCAL_RANK' not in os.environ.keys() and 'NODE_RANK' not in os.environ.keys() and not self.debug:
@@ -308,7 +298,6 @@ class SourceFreeLearner(BaseLearner):
                                 feature_extractor=self.feature_extractor,
                                 classifier=self.classifier,
                                 tgt_epoch_loader=self.active_loader,
-                                val_epoch_loader=self.val_loader,
                                 round_number=self.active_round)
             elif self.cfg.ACTIVE.SETTING == 'PA':
                 PixelSelection(cfg=self.cfg,
