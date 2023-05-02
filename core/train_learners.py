@@ -648,9 +648,10 @@ class Test(BaseLearner):
             print('{:<20}  {:<20.2f}  {:<20.2f}'.format(self.class_names[i], iou_class[i] * 100, accuracy_class[i] * 100))
 
         # print mIoUs in LateX format
-        print('\n\n')
+        print()
+        print('mIoU in LateX format:')
         delimiter = ' & '
-        latex_iou_class = delimiter.join(map(lambda x: '{:.1f}'.format(x), iou_class))
+        latex_iou_class = delimiter.join(map(lambda x: '{:.1f}'.format(x*100), iou_class))
         print(latex_iou_class)
 
         # print metrics table style
