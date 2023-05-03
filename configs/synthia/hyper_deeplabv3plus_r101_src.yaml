@@ -13,16 +13,16 @@ INPUT:
   SOURCE_INPUT_SIZE_TRAIN: (1280, 720)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
-  # GPUS: [0, 1, 2, 3]
-  GPUS: [4, 5, 6, 7]
+  GPUS: [2, 3, 4, 5]
+  # GPUS: [8, 9]
   BATCH_SIZE: 2
   BASE_LR: 1e-3
   NUM_ITER: 60000
 WANDB:
-  ENABLE: False
-  NAME: 'synthia_hyper_v3plus_ch_64'
-  GROUP: 'gtav_pretraining'
+  ENABLE: False # True
+  NAME: 'synthia_hyper_v3plus_ch_64_temp'
+  GROUP: 'synthia_pretraining'
   PROJECT: 'active_domain_adapt'
-  ENTITY: 'pinlab-sapienza'
-OUTPUT_DIR: 'results/pretrain/synthia_hyper_v3plus_ch_64'
+  ENTITY: 'syn2real'
+OUTPUT_DIR: 'results/pretrain/synthia_hyper_v3plus_ch_64_temp'
 PROTOCOL: 'source'

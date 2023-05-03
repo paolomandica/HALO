@@ -235,7 +235,7 @@ class SourceLearner(BaseLearner):
             dataset=train_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
             shuffle=True,
-            num_workers=4,
+            num_workers=2,
             pin_memory=True,
             drop_last=True,
             persistent_workers=True,)
@@ -247,7 +247,7 @@ class SourceLearner(BaseLearner):
             dataset=test_set,
             batch_size=self.cfg.TEST.BATCH_SIZE,
             shuffle=False,
-            num_workers=4,
+            num_workers=2,
             pin_memory=True,
             drop_last=False,
             persistent_workers=True,)
@@ -269,7 +269,7 @@ class SourceFreeLearner(BaseLearner):
             dataset=active_set,
             batch_size=1,
             shuffle=False,
-            num_workers=4,
+            num_workers=2,
             pin_memory=True,
             drop_last=False,)
 
@@ -368,7 +368,7 @@ class SourceFreeLearner(BaseLearner):
             dataset=train_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
             shuffle=True,
-            num_workers=4,
+            num_workers=2,
             pin_memory=True,
             drop_last=True,
             persistent_workers=True,)
@@ -380,7 +380,7 @@ class SourceFreeLearner(BaseLearner):
             dataset=val_set,
             batch_size=self.cfg.TEST.BATCH_SIZE,
             shuffle=False,
-            num_workers=4,
+            num_workers=2,
             pin_memory=True,
             drop_last=False,)
         return val_loader
@@ -458,7 +458,7 @@ class SourceTargetLearner(SourceFreeLearner):
             dataset=source_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
             shuffle=True,
-            num_workers=4,
+            num_workers=2,
             pin_memory=True,
             drop_last=True,
             persistent_workers=True,)
@@ -466,7 +466,7 @@ class SourceTargetLearner(SourceFreeLearner):
             dataset=target_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
             shuffle=True,
-            num_workers=4,
+            num_workers=2,
             pin_memory=True,
             drop_last=True,
             persistent_workers=True,)
@@ -555,7 +555,7 @@ class FullySupervisedLearner(SourceFreeLearner):
             dataset=source_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
             shuffle=True,
-            num_workers=4,
+            num_workers=2,
             pin_memory=True,
             drop_last=True,
             persistent_workers=True,)
@@ -563,7 +563,7 @@ class FullySupervisedLearner(SourceFreeLearner):
             dataset=target_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
             shuffle=True,
-            num_workers=4,
+            num_workers=2,
             pin_memory=True,
             drop_last=True,
             persistent_workers=True,)

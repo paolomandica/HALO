@@ -13,7 +13,7 @@ from joblib import Parallel, delayed
 
 
 class DatasetCatalog(object):
-    DATASET_DIR = "datasets"
+    DATASET_DIR = "/shared/yutengli/data"
     DATASETS = {
         "gtav_train": {
             "data_dir": "gtav",
@@ -21,15 +21,15 @@ class DatasetCatalog(object):
         },
         "synthia_train": {
             "data_dir": "synthia",
-            "data_list": "synthia_train_list.txt"
+            "data_list": "synthia/synthia_train_list.txt"
         },
         "cityscapes_train": {
             "data_dir": "cityscapes",
-            "data_list": "cityscapes_train_list.txt"
+            "data_list": "cityscapes/train.txt"
         },
         "cityscapes_val": {
             "data_dir": "cityscapes",
-            "data_list": "cityscapes_val_list.txt"
+            "data_list": "cityscapes/val.txt"
         },
     }
 
