@@ -23,9 +23,6 @@ from core.utils.visualize import visualize_wrong
 
 NUM_WORKERS = 4
 
-CITYSCAPES_MEAN = torch.Tensor([123.675, 116.28, 103.53]).reshape(1, 1, 3).numpy()
-CITYSCAPES_STD = torch.Tensor([58.395, 57.12, 57.375]).reshape(1, 1, 3).numpy()
-
 np.random.seed(cfg.SEED+1)
 VIZ_LIST = list(np.random.randint(0, 500, 20))
 
@@ -201,7 +198,6 @@ class BaseLearner(pl.LightningModule):
         if len(self.trainer.optimizers) == 2:
             classifier_lr = self.trainer.optimizers[1].param_groups[0]['lr']
             self.log('classifier_lr', classifier_lr, on_step=True, on_epoch=False)
-        
 
 
 class SourceLearner(BaseLearner):
