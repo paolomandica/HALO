@@ -47,15 +47,16 @@ class cityscapesDataSet(data.Dataset):
                     {
                         "img": os.path.join(
                             self.data_root, 
-                            "leftImg8bit/%s/%s_leftImg8bit.png" % (self.split, name)
+                            "leftImg8bit/%s/%s" % (self.split, name)
                         ),
                         "label": os.path.join(
                             self.data_root,
                             "gtFine/%s/%s"
                             % (
                                 self.split,
-                                # name.split("_leftImg8bit")[0]
-                                name + "_gtFine_labelIds.png",
+                                name.split("_leftImg8bit")[0]
+                                + "_gtFine_labelIds.png",
+                                # name + "_gtFine_labelIds.png",
                             ),
                         ),
                         "label_mask": os.path.join(

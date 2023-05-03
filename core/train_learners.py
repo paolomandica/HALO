@@ -21,6 +21,8 @@ from core.active.build import PixelSelection, RegionSelection, OracleAL, OracleM
 import matplotlib.pyplot as plt
 from core.utils.visualize import visualize_wrong
 
+NUM_WORKERS = 4
+
 CITYSCAPES_MEAN = torch.Tensor([123.675, 116.28, 103.53]).reshape(1, 1, 3).numpy()
 CITYSCAPES_STD = torch.Tensor([58.395, 57.12, 57.375]).reshape(1, 1, 3).numpy()
 
@@ -235,7 +237,7 @@ class SourceLearner(BaseLearner):
             dataset=train_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
             shuffle=True,
-            num_workers=2,
+            num_workers=NUM_WORKERS,
             pin_memory=True,
             drop_last=True,
             persistent_workers=True,)
@@ -247,7 +249,7 @@ class SourceLearner(BaseLearner):
             dataset=test_set,
             batch_size=self.cfg.TEST.BATCH_SIZE,
             shuffle=False,
-            num_workers=2,
+            num_workers=NUM_WORKERS,
             pin_memory=True,
             drop_last=False,
             persistent_workers=True,)
@@ -269,7 +271,7 @@ class SourceFreeLearner(BaseLearner):
             dataset=active_set,
             batch_size=1,
             shuffle=False,
-            num_workers=2,
+            num_workers=NUM_WORKERS,
             pin_memory=True,
             drop_last=False,)
 
@@ -371,7 +373,7 @@ class SourceFreeLearner(BaseLearner):
             dataset=train_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
             shuffle=True,
-            num_workers=2,
+            num_workers=NUM_WORKERS,
             pin_memory=True,
             drop_last=True,
             persistent_workers=True,)
@@ -383,7 +385,7 @@ class SourceFreeLearner(BaseLearner):
             dataset=val_set,
             batch_size=self.cfg.TEST.BATCH_SIZE,
             shuffle=False,
-            num_workers=2,
+            num_workers=NUM_WORKERS,
             pin_memory=True,
             drop_last=False,)
         return val_loader
@@ -461,7 +463,7 @@ class SourceTargetLearner(SourceFreeLearner):
             dataset=source_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
             shuffle=True,
-            num_workers=2,
+            num_workers=NUM_WORKERS,
             pin_memory=True,
             drop_last=True,
             persistent_workers=True,)
@@ -469,7 +471,7 @@ class SourceTargetLearner(SourceFreeLearner):
             dataset=target_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
             shuffle=True,
-            num_workers=2,
+            num_workers=NUM_WORKERS,
             pin_memory=True,
             drop_last=True,
             persistent_workers=True,)
@@ -557,7 +559,7 @@ class FullySupervisedLearner(SourceFreeLearner):
             dataset=source_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
             shuffle=True,
-            num_workers=2,
+            num_workers=NUM_WORKERS,
             pin_memory=True,
             drop_last=True,
             persistent_workers=True,)
@@ -565,7 +567,7 @@ class FullySupervisedLearner(SourceFreeLearner):
             dataset=target_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
             shuffle=True,
-            num_workers=2,
+            num_workers=NUM_WORKERS,
             pin_memory=True,
             drop_last=True,
             persistent_workers=True,)

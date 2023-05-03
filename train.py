@@ -95,20 +95,12 @@ def main():
 
     callbacks = [checkcall_1]
 
-    if cfg.PROTOCOL in ['source_target', 'source_free']:
-        # checkcall_2 = ModelCheckpoint(
-        #     save_top_k=-1,
-        #     monitor="active_round",
-        #     mode="max",
-        #     dirpath=cfg.OUTPUT_DIR,
-        #     filename="model_{global_step}_{active_round}",
-        # )
-        # save checkpoint every 5000 steps
-        checkcall_2 = PeriodicCheckpoint(
-            dirpath=cfg.OUTPUT_DIR,
-            every=cfg.SOLVER.CHECKPOINT_PERIOD,
-        )
-        callbacks.append(checkcall_2)
+    # if cfg.PROTOCOL in ['source_target', 'source_free']:
+    #     checkcall_2 = PeriodicCheckpoint(
+    #         dirpath=cfg.OUTPUT_DIR,
+    #         every=cfg.SOLVER.CHECKPOINT_PERIOD,
+    #     )
+    #     callbacks.append(checkcall_2)
 
     # init trainer
     trainer = pl.Trainer(
