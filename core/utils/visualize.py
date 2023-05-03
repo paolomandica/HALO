@@ -7,8 +7,6 @@ import torch.nn.functional as F
 from PIL import Image
 from tqdm import tqdm
 from core.active.floating_region import FloatingRegionScore
-from core.active.spatial_purity import SpatialPurity
-
 
 import os
 from core.configs import cfg
