@@ -186,7 +186,7 @@ class DepthwiseSeparableASPP(nn.Module):
                 m.bias.data.zero_()
 
 
-########### Hyper Version of the Euclidean Heads ############
+########### Hyper Versions of the Classifier Heads ############
 
 class ASPP_Classifier_V2_Hyper(nn.Module):
     def __init__(self, in_channels, dilation_series, padding_series, num_classes, reduced_channels):

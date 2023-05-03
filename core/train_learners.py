@@ -1,7 +1,5 @@
-import logging
 import os
 import pytorch_lightning as pl
-import torch.utils.data as data
 import numpy as np
 import torch
 import torch.nn as nn
@@ -14,11 +12,10 @@ from core.configs import cfg
 from core.datasets.dataset_path_catalog import DatasetCatalog
 from core.loss.local_consistent_loss import LocalConsistentLoss
 from core.models import build_feature_extractor, build_classifier
-from core.utils.misc import AverageMeter, load_checkpoint, load_checkpoint_ripu
+from core.utils.misc import load_checkpoint
 from core.loss.negative_learning_loss import NegativeLearningLoss
 from core.active.build import PixelSelection, RegionSelection, OracleAL, OracleMixedAL
 
-import matplotlib.pyplot as plt
 from core.utils.visualize import visualize_wrong
 
 NUM_WORKERS = 4
@@ -40,15 +37,8 @@ class BaseLearner(pl.LightningModule):
 
         # resume checkpoint if needed
         if cfg.resume:
-            print("Loading checkpoint from {}".format(cfg.resume))
-            if 'step' in cfg.resume:
-                load_checkpoint(self.feature_extractor, cfg.resume, module='feature_extractor')
-                load_checkpoint(self.classifier, cfg.resume, module='classifier')
-            elif 'iter' in cfg.resume:
-                load_checkpoint_ripu(self.feature_extractor, cfg.resume, module='feature_extractor')
-                load_checkpoint_ripu(self.classifier, cfg.resume, module='classifier')
-            else:
-                raise NotImplementedError('Unknown checkpoint type')
+            load_checkpoint(self.feature_extractor, cfg.resume, module='feature_extractor')
+            load_checkpoint(self.classifier, cfg.resume, module='classifier')
 
         # create criterion
         self.criterion = nn.CrossEntropyLoss(ignore_index=255)

@@ -80,7 +80,6 @@ class FloatingRegionScore(nn.Module):
         return region_uncertainty
 
     def quantize_uncert_map(self, decoder_out, type='kmeans', cluster_centers=None):
-
         assert type in ['uniform',
                         'kmeans'], "type '{}' not implemented".format(type)
 
@@ -105,7 +104,6 @@ class FloatingRegionScore(nn.Module):
             return indices.reshape(decoder_out.shape[-2:]).long()
 
     def compute_region_impurity(self, predict, K, normalize=False):
-
         one_hot = F.one_hot(predict, num_classes=K).float()
         one_hot = one_hot.permute((2, 0, 1)).unsqueeze(dim=0)  # [1, 19, h, w]
         summary = self.purity_conv(one_hot)  # [1, 19, h, w]
