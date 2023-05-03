@@ -120,7 +120,7 @@ class DatasetCatalog(object):
             }
             torch.save(indicator, path2indicator)
 
-        Parallel(n_jobs=8)(delayed(init_mask)(fname) for fname in tqdm(content))
+        Parallel(n_jobs=-1)(delayed(init_mask)(fname) for fname in tqdm(content))
         # for fname in tqdm(content):
         #     init_mask(fname)
 

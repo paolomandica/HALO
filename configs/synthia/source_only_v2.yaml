@@ -1,12 +1,13 @@
 MODEL:
-  NAME: "deeplabv3plus_resnet101"
+  NAME: "deeplabv2_resnet101"
   WEIGHTS: 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth'
   FREEZE_BN: True
+  NUM_CLASSES: 16
   HYPER: True
   REDUCED_CHANNELS: 64
-  WEIGHTED_NORM: False
+  WEIGHTED_NORM: True
 DATASETS:
-  SOURCE_TRAIN: "gtav_train"
+  SOURCE_TRAIN: "synthia_train"
   TEST: "cityscapes_val"
 INPUT:
   SOURCE_INPUT_SIZE_TRAIN: (1280, 720)
@@ -19,9 +20,9 @@ SOLVER:
   NUM_ITER: 60000
 WANDB:
   ENABLE: True
-  NAME: 'hyper_v3plus_ch_64_reproduce'
-  GROUP: 'gtav_pretraining'
+  NAME: 'synthia_hyper_v2_ch_64'
+  GROUP: 'synthia_pretraining'
   PROJECT: 'active_domain_adapt'
   ENTITY: 'pinlab-sapienza'
-OUTPUT_DIR: 'results/pretrain_gtav/hyper_v3plus_ch_64_reproduce'
+OUTPUT_DIR: 'results/pretrain_synthia/hyper_v2_ch_64'
 PROTOCOL: 'source'

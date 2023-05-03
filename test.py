@@ -7,6 +7,7 @@ from core.train_learners import Test
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers.wandb import WandbLogger
 import pytorch_lightning as pl
+import os
 
 warnings.filterwarnings('ignore')
 
@@ -14,7 +15,7 @@ warnings.filterwarnings('ignore')
 def main():
     args = parse_args()
 
-    output_dir = cfg.OUTPUT_DIR
+    output_dir = os.path.join(cfg.OUTPUT_DIR, 'test')
     if output_dir:
         mkdir(output_dir)
 
@@ -28,7 +29,7 @@ def main():
     trainer = pl.Trainer(
         accelerator='gpu',
         devices=cfg.SOLVER.GPUS,
-        precision=32,
+        precision=16,
         detect_anomaly=True)
 
     # start training
