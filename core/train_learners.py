@@ -14,7 +14,7 @@ from core.loss.local_consistent_loss import LocalConsistentLoss
 from core.models import build_feature_extractor, build_classifier
 from core.utils.misc import load_checkpoint
 from core.loss.negative_learning_loss import NegativeLearningLoss
-from core.active.build import PixelSelection, RegionSelection, OracleAL, OracleMixedAL
+from core.active.build import RegionSelection
 
 from core.utils.visualize import visualize_wrong
 
@@ -284,7 +284,6 @@ class SourceFreeLearner(BaseLearner):
         if self.local_rank == 0 and batch_idx in self.active_iters and not self.debug:
             print(f">>>>>>>>>>>>>>>> Active Round {self.active_round} >>>>>>>>>>>>>>>>")
             print(f"batch_idx: {batch_idx}, self.local_rank: {self.local_rank}")
-            print()
 
             if self.cfg.ACTIVE.SETTING == "RA":
                 RegionSelection(cfg=self.cfg,
@@ -292,24 +291,6 @@ class SourceFreeLearner(BaseLearner):
                                 classifier=self.classifier,
                                 tgt_epoch_loader=self.active_loader,
                                 round_number=self.active_round)
-            elif self.cfg.ACTIVE.SETTING == 'PA':
-                PixelSelection(cfg=self.cfg,
-                               feature_extractor=self.feature_extractor,
-                               classifier=self.classifier,
-                               tgt_epoch_loader=self.active_loader,
-                               round_number=self.active_round)
-            elif self.cfg.ACTIVE.SETTING == 'oracle_cert':
-                OracleAL(cfg=self.cfg,
-                           feature_extractor=self.feature_extractor,
-                           classifier=self.classifier,
-                           tgt_epoch_loader=self.active_loader,
-                           round_number=self.active_round)
-            elif self.cfg.ACTIVE.SETTING == 'oracle_certuncert':
-                OracleMixedAL(cfg=self.cfg,
-                           feature_extractor=self.feature_extractor,
-                           classifier=self.classifier,
-                           tgt_epoch_loader=self.active_loader,
-                           round_number=self.active_round)
 
 
             self.log('active_round', self.active_round, on_step=True, on_epoch=False)
