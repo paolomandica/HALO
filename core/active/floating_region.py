@@ -85,8 +85,14 @@ class FloatingRegionScore(nn.Module):
 
         if type == 'uniform':
             EPS = 1e-5
-            predict = (decoder_out.squeeze(0).norm(
-                dim=0) * self.K) - 0.5  # [h, w]
+            decoder_out_norm = decoder_out.squeeze(0).norm(dim=0)
+            norm_min, norm_max = decoder_out_norm.min(), decoder_out_norm.max()
+            decoder_out_norm = (decoder_out_norm - norm_min) / \
+                (norm_max - norm_min)
+            predict = (decoder_out_norm * self.K) - 0.5  # [h, w]
+
+            # predict = (decoder_out.squeeze(0).norm(dim=0) * self.K) - 0.5  # [h, w]
+
             predict = torch.clamp(predict, min=-0.5+EPS, max=self.K-0.5-EPS)
             predict = torch.round(predict).long()
             return predict
@@ -116,7 +122,7 @@ class FloatingRegionScore(nn.Module):
         return region_impurity, count
 
     def forward(self, logit: torch.Tensor, decoder_out: torch.Tensor = None, unc_type: str = None,
-                pur_type: str = None, normalize: bool = False, cluster_centers=None):
+                pur_type: str = None, normalize: bool = False, cluster_centers=None, quant_type=None):
         """
         Compute regions score, impurity and uncertainty.
 
@@ -132,6 +138,9 @@ class FloatingRegionScore(nn.Module):
         """
         logit = logit.squeeze(dim=0)  # [19, h ,w]
         p = torch.softmax(logit, dim=0)  # [19, h, w]
+
+        if quant_type == None:
+            quant_type = cfg.ACTIVE.QUANT
 
         assert unc_type in ['entropy', 'hyperbolic', 'certainty', 'ent_cert',
                             'none'], "error: unc_type '{}' not implemented".format(unc_type)
@@ -150,7 +159,7 @@ class FloatingRegionScore(nn.Module):
                 predict, self.in_channels, normalize)
         elif pur_type == 'hyper':
             predict = self.quantize_uncert_map(
-                decoder_out, type=cfg.ACTIVE.QUANT, cluster_centers=cluster_centers)
+                decoder_out, type=quant_type, cluster_centers=cluster_centers)
             region_impurity, count = self.compute_region_impurity(
                 predict, self.K, normalize)
         elif pur_type == 'none':
