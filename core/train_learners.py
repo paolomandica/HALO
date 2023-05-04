@@ -61,7 +61,7 @@ class BaseLearner(pl.LightningModule):
         if self.hyper:
             output, embed = self.classifier(self.feature_extractor(image))
         else:
-            output = self.classifier(self.feature_extractor(image))
+            output, embed = self.classifier(self.feature_extractor(image))
 
         if save_wrong_path:
             dir_path = os.path.join(self.cfg.OUTPUT_DIR, 'viz')
@@ -203,6 +203,8 @@ class SourceLearner(BaseLearner):
         src_out = self.forward(src_input)
         if self.hyper:
             src_out = src_out[0]
+        else:
+            src_out = src_out[0]
 
         loss = self.criterion(src_out, src_label)
         self.log('loss', loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
@@ -307,6 +309,8 @@ class SourceFreeLearner(BaseLearner):
         tgt_out = self.forward(tgt_input)
         if self.hyper:
             tgt_out = tgt_out[0]
+        else:
+            tgt_out = tgt_out[0]
 
         predict = torch.softmax(tgt_out, dim=1)
         loss = torch.Tensor([0]).cuda()
@@ -374,12 +378,16 @@ class SourceTargetLearner(SourceFreeLearner):
         src_out = self.forward(src_input)
         if self.hyper:
             src_out = src_out[0]
+        else:
+            src_out = src_out[0]
 
         # target data
         # tgt_mask is active label, 255 means unlabeled data
         tgt_input, tgt_mask = batch[1]['img'], batch[1]['mask']
         tgt_out = self.forward(tgt_input)
         if self.hyper:
+            tgt_out = tgt_out[0]
+        else:
             tgt_out = tgt_out[0]
 
         predict = torch.softmax(tgt_out, dim=1)
@@ -471,12 +479,16 @@ class FullySupervisedLearner(SourceFreeLearner):
         src_out = self.forward(src_input)
         if self.hyper:
             src_out = src_out[0]
+        else:
+            src_out = src_out[0]
 
         # target data
         # tgt_mask is active label, 255 means unlabeled data
         tgt_input, tgt_label = batch[1]['img'], batch[1]['label']
         tgt_out = self.forward(tgt_input)
         if self.hyper:
+            tgt_out = tgt_out[0]
+        else:
             tgt_out = tgt_out[0]
 
         predict = torch.softmax(tgt_out, dim=1)
@@ -551,9 +563,14 @@ class Test(BaseLearner):
         self.targets = np.array([])
 
     def test_step(self, batch, batch_idx):
-        x, y, name = batch['img'], batch['label'], batch['name']
-        name = name[0]
-        name = name.rsplit('/', 1)[-1].rsplit('_', 1)[0]
+        x, y = batch['img'], batch['label']
+
+        if 'name' in batch.keys():
+            name = batch['name']
+            name = name[0]
+            name = name.rsplit('/', 1)[-1].rsplit('_', 1)[0]
+        else:
+            name = str(batch_idx)
 
         embed_file_name = None
         if self.cfg.TEST.SAVE_EMBED:

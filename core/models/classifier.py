@@ -2,6 +2,9 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from ..utils.hyperbolic import HyperMapper, HyperMLR
+from core.configs import cfg
+
+import matplotlib.pyplot as plt
 
 
 class ASPP_Classifier_V2(nn.Module):
@@ -105,7 +108,8 @@ class DepthwiseSeparableASPP(nn.Module):
             DepthwiseSeparableConv2d(decoder_out_channels, decoder_out_channels, kernel_size=3, stride=1, padding=1,
                                      bias=False, norm_layer=norm_layer),
             nn.Dropout2d(0.1),
-            nn.Conv2d(decoder_out_channels, num_classes, kernel_size=1, stride=1, padding=0))
+            nn.Conv2d(decoder_out_channels, num_classes, kernel_size=1, stride=1, padding=0),
+        )
 
         # init weighted normalization mlp
         self.wn_mlp = None
@@ -153,7 +157,10 @@ class DepthwiseSeparableASPP(nn.Module):
 
         # feed to decoder
         feats = torch.cat([aspp_out, shortcut_out], dim=1)
-        decoder_out = self.decoder(feats)
+        # decoder_out = self.decoder(feats)
+        decoder_out = self.decoder[:2](feats)
+        out = self.decoder[2:](decoder_out)
+
 
         # weighted normalization
         if self.wn_mlp is not None:
@@ -168,11 +175,12 @@ class DepthwiseSeparableASPP(nn.Module):
             temp_out = temp_out.reshape(-1, decoder_out.size(1), decoder_out.size(2), decoder_out.size(3))
             decoder_out = temp_out * norm_weights
 
-            decoder_out = self.cls_conv(decoder_out)
+            out = self.cls_conv(decoder_out)
+
 
         if size is not None:
-            decoder_out = F.interpolate(decoder_out, size=size, mode='bilinear', align_corners=True)
-        return decoder_out
+            out = F.interpolate(out, size=size, mode='bilinear', align_corners=True)
+        return out, decoder_out
 
     def _init_weight(self):
         for m in self.modules():
@@ -209,8 +217,8 @@ class ASPP_Classifier_V2_Hyper(nn.Module):
             m.weight.data.normal_(0, 0.01)
 
         # self.conv_reduce = nn.Conv2d(in_channels, reduced_channels, kernel_size=1)
-        self.mapper = HyperMapper()
-        self.conv_seg = HyperMLR(reduced_channels, num_classes)
+        self.mapper = HyperMapper(c=cfg.MODEL.CURVATURE)
+        self.conv_seg = HyperMLR(reduced_channels, num_classes, c=cfg.MODEL.CURVATURE)
 
     def forward(self, x, size=None):
         x = x['out']
@@ -281,8 +289,8 @@ class DepthwiseSeparableASPP_Hyper(nn.Module):
 
         # to reduce channels and work in low dimensions
         self.conv_reduce = nn.Conv2d(decoder_out_channels, reduced_channels, kernel_size=1)
-        self.mapper = HyperMapper()
-        self.conv_seg = HyperMLR(reduced_channels, num_classes)
+        self.mapper = HyperMapper(c=cfg.MODEL.CURVATURE)
+        self.conv_seg = HyperMLR(reduced_channels, num_classes, c=cfg.MODEL.CURVATURE)
 
         # init weighted normalization mlp
         self.wn_mlp = None

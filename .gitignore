@@ -131,3 +131,5 @@ checkpoints
 scripts/train_scripts_luca.sh
 lightning_logs
 visualizzazioni
+visualizzazioni2
+*.png
