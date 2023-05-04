@@ -43,9 +43,9 @@ _C.DATASETS.TEST = ""
 _C.SOLVER = CN()
 _C.SOLVER.GPUS = [0,1,2,3]
 _C.SOLVER.NUM_ITER = 60000
-# _C.SOLVER.STOP_ITER = 40000
 _C.SOLVER.CHECKPOINT_PERIOD = 1000
 
+# optimizer and learning rate
 _C.SOLVER.LR_METHOD = 'poly'
 _C.SOLVER.BASE_LR = 2.5e-4
 _C.SOLVER.LR_POWER = 0.9
@@ -66,7 +66,6 @@ _C.SOLVER.LCR_TYPE = "l1"
 
 
 _C.ACTIVE = CN()
-
 # active strategy
 _C.ACTIVE.NAME = 'AL-RIPU'
 _C.ACTIVE.UNCERTAINTY = 'entropy'
@@ -77,15 +76,14 @@ _C.ACTIVE.SELECT_ITER = [0, 15001, 30001, 40001, 50001] # for 5 selection rounds
 _C.ACTIVE.RATIO = 0.022
 # total selected pixel per image
 _C.ACTIVE.PIXELS = 40
-# k-neighbor-radius
+# hyper-parameters
 _C.ACTIVE.RADIUS_K = 1
-# selected pixel visualization
-_C.ACTIVE.VIZ_MASK = True
-_C.ACTIVE.ALPHA = None
 _C.ACTIVE.NORMALIZE = True
 _C.ACTIVE.MASK_RADIUS_K = 5
 _C.ACTIVE.K = 100
 _C.ACTIVE.QUANT = 'uniform'
+# visualization of active selection
+_C.ACTIVE.VIZ_MASK = True
 
 
 # ---------------------------------------------------------------------------- #
@@ -97,10 +95,12 @@ _C.TEST.VIZ_SCORE = False
 _C.TEST.VIZ_WRONG = False
 _C.TEST.SAVE_EMBED = False
 
+# ---------------------------------------------------------------------------- #
+# Misc options
+# ---------------------------------------------------------------------------- #
 _C.OUTPUT_DIR = ""
 _C.resume = ""
 _C.checkpoint = ""
-_C.PREPARE_DIR = ""
 _C.SEED = -1
 _C.DEBUG = 0
 _C.PROTOCOL = "source_target"

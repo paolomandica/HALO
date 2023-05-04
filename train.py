@@ -18,6 +18,13 @@ torch.backends.cudnn.benchmark = True
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 
+protocol_types = {
+    'source': SourceLearner,
+    'source_free': SourceFreeLearner,
+    'source_target': SourceTargetLearner,
+    'fully_sup': FullySupervisedLearner
+}
+
 
 class PeriodicCheckpoint(ModelCheckpoint):
     def __init__(self, dirpath: str,  every: int):
@@ -68,16 +75,9 @@ def main():
     pl.seed_everything(cfg.SEED, workers=True)
 
     # init learner
-    print(f'\n\n>>>>>>>>>>>>>> PROTOCOL: {cfg.PROTOCOL} <<<<<<<<<<<<<<\n\n')
-    if cfg.PROTOCOL == 'source':
-        learner = SourceLearner(cfg)
-    elif cfg.PROTOCOL == 'source_free':
-        learner = SourceFreeLearner(cfg)
-    elif cfg.PROTOCOL == 'source_target':
-        if cfg.ACTIVE.RATIO == 1.:
-            learner = FullySupervisedLearner(cfg)
-        else:
-            learner = SourceTargetLearner(cfg)
+    if cfg.PROTOCOL in protocol_types:
+        print(f'\n\n>>>>>>>>>>>>>> PROTOCOL: {cfg.PROTOCOL} <<<<<<<<<<<<<<\n\n')
+        learner = protocol_types[cfg.PROTOCOL](cfg)
     else:
         raise NotImplementedError(f'Protocol {cfg.PROTOCOL} is not implemented.')
 
@@ -96,20 +96,12 @@ def main():
 
     callbacks = [checkcall_1]
 
-    if cfg.PROTOCOL in ['source_target', 'source_free']:
-        # checkcall_2 = ModelCheckpoint(
-        #     save_top_k=-1,
-        #     monitor="active_round",
-        #     mode="max",
-        #     dirpath=cfg.OUTPUT_DIR,
-        #     filename="model_{global_step}_{active_round}",
-        # )
-        # save checkpoint every 5000 steps
-        checkcall_2 = PeriodicCheckpoint(
-            dirpath=cfg.OUTPUT_DIR,
-            every=cfg.SOLVER.CHECKPOINT_PERIOD,
-        )
-        callbacks.append(checkcall_2)
+    # if cfg.PROTOCOL in ['source_target', 'source_free']:
+    #     checkcall_2 = PeriodicCheckpoint(
+    #         dirpath=cfg.OUTPUT_DIR,
+    #         every=cfg.SOLVER.CHECKPOINT_PERIOD,
+    #     )
+    #     callbacks.append(checkcall_2)
 
     # init trainer
     trainer = pl.Trainer(
@@ -132,7 +124,7 @@ def main():
     # start training
 
     if cfg.checkpoint:
-        print(f">>>>>>>>>>>> Resuming from checkpoint: {cfg.checkpoint} <<<<<<<<<<<<")
+        print(f"Resuming from checkpoint: {cfg.checkpoint}")
         trainer.fit(learner, ckpt_path=cfg.checkpoint)
     else:
         trainer.fit(learner)
@@ -143,5 +135,8 @@ if __name__ == '__main__':
     # remove gtIndicator subdirectory
     path = os.path.join(cfg.OUTPUT_DIR, 'gtIndicator')
     if os.path.exists(path):
-        print("Removing gtIndicator directory...")
-        shutil.rmtree(path)
+        try:
+            print("Removing gtIndicator directory...")
+            shutil.rmtree(path)
+        except:
+            print("Failed to remove gtIndicator directory.")

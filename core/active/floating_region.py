@@ -25,28 +25,27 @@ class FloatingRegionScore(nn.Module):
         else:
             purity_type = purity_type
 
-        if purity_type == 'ripu':
-            self.purity_conv = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=size,
-                                        stride=1, padding=int(size / 2), bias=False,
-                                        padding_mode=padding_mode, groups=in_channels)
-            weight = torch.ones((size, size), dtype=torch.float32)
-            weight = weight.unsqueeze(dim=0).unsqueeze(dim=0)
-            weight = weight.repeat([in_channels, 1, 1, 1])
-            weight = nn.Parameter(weight)
-            self.purity_conv.weight = weight
-            self.purity_conv.requires_grad_(False)
-        elif purity_type == 'hyper':
+        if purity_type == 'hyper':
             self.K = K
             self.purity_conv = nn.Conv2d(in_channels=self.K, out_channels=self.K, kernel_size=3,
-                                        stride=1, padding=int(3 / 2), bias=False,
-                                        padding_mode='zeros', groups=self.K)
+                                         stride=1, padding=int(3 / 2), bias=False,
+                                         padding_mode='zeros', groups=self.K)
             weight = torch.ones((3, 3), dtype=torch.float32)
             weight = weight.unsqueeze(dim=0).unsqueeze(dim=0)
             weight = weight.repeat([self.K, 1, 1, 1])
             weight = nn.Parameter(weight)
             self.purity_conv.weight = weight
             self.purity_conv.requires_grad_(False)
-
+        else:
+            self.purity_conv = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=size,
+                                         stride=1, padding=int(size / 2), bias=False,
+                                         padding_mode=padding_mode, groups=in_channels)
+            weight = torch.ones((size, size), dtype=torch.float32)
+            weight = weight.unsqueeze(dim=0).unsqueeze(dim=0)
+            weight = weight.repeat([in_channels, 1, 1, 1])
+            weight = nn.Parameter(weight)
+            self.purity_conv.weight = weight
+            self.purity_conv.requires_grad_(False)
 
         self.entropy_conv = nn.Conv2d(in_channels=1, out_channels=1, kernel_size=size,
                                       stride=1, padding=int(size / 2), bias=False,
@@ -59,29 +58,35 @@ class FloatingRegionScore(nn.Module):
 
     def compute_region_uncertainty(self, unc_type, logit, p, decoder_out, normalize=False):
         if unc_type == 'entropy':
-            region_uncertainty = torch.sum(-p * torch.log(p + 1e-6), dim=0).unsqueeze(dim=0).unsqueeze(dim=0) / math.log(19)  # [1, 1, h, w]
+            region_uncertainty = torch.sum(-p * torch.log(p + 1e-6), dim=0).unsqueeze(
+                dim=0).unsqueeze(dim=0) / math.log(19)  # [1, 1, h, w]
         elif unc_type == 'ent_cert':
-            region_uncertainty = 1 - torch.sum(-p * torch.log(p + 1e-6), dim=0).unsqueeze(dim=0).unsqueeze(dim=0) / math.log(19)  # [1, 1, h, w]
+            region_uncertainty = 1 - torch.sum(-p * torch.log(p + 1e-6), dim=0).unsqueeze(
+                dim=0).unsqueeze(dim=0) / math.log(19)  # [1, 1, h, w]
         elif unc_type == 'hyperbolic':
-            region_uncertainty = 1 - decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
+            region_uncertainty = 1 - \
+                decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
         elif unc_type == 'certainty':
             region_uncertainty = decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
         elif unc_type == 'none':
-            region_uncertainty = torch.zeros((1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32).cuda()
+            region_uncertainty = torch.zeros(
+                (1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32).cuda()
         else:
-            raise NotImplementedError("unc_type '{}' not implemented".format(unc_type))
+            raise NotImplementedError(
+                "unc_type '{}' not implemented".format(unc_type))
         if normalize:
-            region_uncertainty = (region_uncertainty - region_uncertainty.min().item()) / (region_uncertainty.max().item() - region_uncertainty.min().item())
+            region_uncertainty = (region_uncertainty - region_uncertainty.min().item()) / (
+                region_uncertainty.max().item() - region_uncertainty.min().item())
         return region_uncertainty
-    
 
     def quantize_uncert_map(self, decoder_out, type='kmeans', cluster_centers=None):
-
-        assert type in ['uniform', 'kmeans'], "type '{}' not implemented".format(type)
+        assert type in ['uniform',
+                        'kmeans'], "type '{}' not implemented".format(type)
 
         if type == 'uniform':
             EPS = 1e-5
-            predict = (decoder_out.squeeze(0).norm(dim=0) * self.K) - 0.5  # [h, w]
+            predict = (decoder_out.squeeze(0).norm(
+                dim=0) * self.K) - 0.5  # [h, w]
             predict = torch.clamp(predict, min=-0.5+EPS, max=self.K-0.5-EPS)
             predict = torch.round(predict).long()
             return predict
@@ -92,24 +97,25 @@ class FloatingRegionScore(nn.Module):
                 cluster_centers = torch.Tensor(kmeans_dict[checkpoint])
 
             predict = decoder_out.squeeze(0).norm(dim=0)
-            predict_flatten = predict.reshape(-1,1)
-            cluster_ids_sorted = torch.cdist(predict_flatten.reshape(1,-1, 1).float(), cluster_centers.reshape(1,-1, 1).float().to(predict_flatten.device))
+            predict_flatten = predict.reshape(-1, 1)
+            cluster_ids_sorted = torch.cdist(predict_flatten.reshape(
+                1, -1, 1).float(), cluster_centers.reshape(1, -1, 1).float().to(predict_flatten.device))
             _, indices = cluster_ids_sorted.squeeze(0).min(dim=-1)
             return indices.reshape(decoder_out.shape[-2:]).long()
 
-    
     def compute_region_impurity(self, predict, K, normalize=False):
-        
         one_hot = F.one_hot(predict, num_classes=K).float()
         one_hot = one_hot.permute((2, 0, 1)).unsqueeze(dim=0)  # [1, 19, h, w]
         summary = self.purity_conv(one_hot)  # [1, 19, h, w]
         count = torch.sum(summary, dim=1, keepdim=True)  # [1, 1, h, w]
 
         dist = summary / count
-        region_impurity = torch.sum(-dist * torch.log(dist + 1e-6), dim=1, keepdim=True) / math.log(K)
+        region_impurity = torch.sum(-dist * torch.log(dist + 1e-6),
+                                    dim=1, keepdim=True) / math.log(K)
 
         if normalize:
-            region_impurity = (region_impurity - region_impurity.min().item()) / (region_impurity.max().item() - region_impurity.min().item())
+            region_impurity = (region_impurity - region_impurity.min().item()) / \
+                (region_impurity.max().item() - region_impurity.min().item())
 
         return region_impurity, count
 
@@ -124,40 +130,47 @@ class FloatingRegionScore(nn.Module):
             pur_type: type of impurity to compute (ripu, none)
             normalize: normalize the impurity and uncertainty
             alpha: weight of hyperbolic uncertainty mixed with entropy uncertainty
-        
+
         Return:
             score, purity, entropy
         """
         logit = logit.squeeze(dim=0)  # [19, h ,w]
         p = torch.softmax(logit, dim=0)  # [19, h, w]
 
-        assert unc_type in ['entropy', 'hyperbolic', 'certainty', 'ent_cert', 'none'], "error: unc_type '{}' not implemented".format(unc_type)
+        assert unc_type in ['entropy', 'hyperbolic', 'certainty', 'ent_cert',
+                            'none'], "error: unc_type '{}' not implemented".format(unc_type)
         if self.entropy_conv.weight.device != logit.device:
             self.entropy_conv = self.entropy_conv.to(logit.device)
             self.purity_conv = self.purity_conv.to(logit.device)
-        
+
         if alpha is not None:
-            region_uncertainty_entropy = self.compute_region_uncertainty('entropy', logit, p, decoder_out)
-            region_uncertainty_hyper = self.compute_region_uncertainty('hyperbolic', logit, p, decoder_out)
-            region_uncertainty = (1-alpha) * region_uncertainty_entropy + alpha * region_uncertainty_hyper
+            region_uncertainty_entropy = self.compute_region_uncertainty(
+                'entropy', logit, p, decoder_out)
+            region_uncertainty_hyper = self.compute_region_uncertainty(
+                'hyperbolic', logit, p, decoder_out)
+            region_uncertainty = (
+                1-alpha) * region_uncertainty_entropy + alpha * region_uncertainty_hyper
         else:
-            region_uncertainty = self.compute_region_uncertainty(unc_type, logit, p, decoder_out)
+            region_uncertainty = self.compute_region_uncertainty(
+                unc_type, logit, p, decoder_out)
 
         if unc_type == 'none':
             region_sum_uncert = region_uncertainty
         else:
-            region_sum_uncert = self.entropy_conv(region_uncertainty.float())  # [1, 1, h, w]
-
+            region_sum_uncert = self.entropy_conv(
+                region_uncertainty.float())  # [1, 1, h, w]
 
         # one_hot = F.one_hot(predict, num_classes=self.in_channels).float()
         # one_hot = one_hot.permute((2, 0, 1)).unsqueeze(dim=0)  # [1, 19, h, w]
         # summary = self.purity_conv(one_hot)  # [1, 19, h, w]
         # count = torch.sum(summary, dim=1, keepdim=True)  # [1, 1, h, w]
-        
-        assert pur_type in ['ripu', 'hyper', 'none'], "error: pur_type '{}' not implemented".format(pur_type)
+
+        assert pur_type in [
+            'ripu', 'hyper', 'none'], "error: pur_type '{}' not implemented".format(pur_type)
         if pur_type == 'ripu':
             predict = torch.argmax(p, dim=0)   # [h, w]
-            region_impurity, count = self.compute_region_impurity(predict, self.in_channels, normalize)
+            region_impurity, count = self.compute_region_impurity(
+                predict, self.in_channels, normalize)
             # dist = summary / count
             # region_impurity = torch.sum(-dist * torch.log(dist + 1e-6), dim=1, keepdim=True) / math.log(19)
         elif pur_type == 'hyper':
@@ -165,58 +178,25 @@ class FloatingRegionScore(nn.Module):
             # predict = (decoder_out.squeeze(0).norm(dim=0) * self.K) - 0.5  # [h, w]
             # predict = torch.clamp(predict, min=-0.5+EPS, max=self.K-0.5-EPS)
             # predict = torch.round(predict).long()
-            predict = self.quantize_uncert_map(decoder_out, type=cfg.ACTIVE.QUANT, cluster_centers=cluster_centers)
+            predict = self.quantize_uncert_map(
+                decoder_out, type=cfg.ACTIVE.QUANT, cluster_centers=cluster_centers)
 
-            region_impurity, count = self.compute_region_impurity(predict, self.K, normalize)
+            region_impurity, count = self.compute_region_impurity(
+                predict, self.K, normalize)
         elif pur_type == 'none':
-            region_impurity = torch.zeros((1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32).cuda()
-            count = torch.ones((1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32).cuda()
+            region_impurity = torch.zeros(
+                (1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32).cuda()
+            count = torch.ones(
+                (1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32).cuda()
 
         prediction_uncertainty = region_sum_uncert / count  # [1, 1, h, w]
 
         if normalize:
-            prediction_uncertainty = (prediction_uncertainty - prediction_uncertainty.min().item()) / (prediction_uncertainty.max().item() - prediction_uncertainty.min().item())
-            region_impurity = (region_impurity - region_impurity.min().item()) / (region_impurity.max().item() - region_impurity.min().item())
+            prediction_uncertainty = (prediction_uncertainty - prediction_uncertainty.min().item()) / (
+                prediction_uncertainty.max().item() - prediction_uncertainty.min().item())
+            region_impurity = (region_impurity - region_impurity.min().item()) / \
+                (region_impurity.max().item() - region_impurity.min().item())
 
         score = region_impurity * prediction_uncertainty
         return score.squeeze(dim=0).squeeze(dim=0), region_impurity.squeeze(dim=0).squeeze(
             dim=0), prediction_uncertainty.squeeze(dim=0).squeeze(dim=0)
-    
-
-
-'''
-EPS = 1e-5
-K = 200
-in_channels = K
-self.purity_conv = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=3,
-                            stride=1, padding=int(3 / 2), bias=False,
-                            padding_mode='zeros', groups=in_channels)
-weight = torch.ones((3, 3), dtype=torch.float32)
-weight = weight.unsqueeze(dim=0).unsqueeze(dim=0)
-weight = weight.repeat([in_channels, 1, 1, 1])
-weight = nn.Parameter(weight)
-self.purity_conv.weight = weight
-self.purity_conv.requires_grad_(False)
-self.purity_conv = self.purity_conv.to(predict.device)
-
-
-predict = (decoder_out.squeeze(0).norm(dim=0) * K) - 0.5  # [h, w]
-predict = torch.clamp(predict, min=-0.5+EPS, max=K-0.5-EPS)
-predict = torch.round(predict).long()
-region_impurity, count = self.compute_region_impurity(predict, K, normalize)
-region_impurity = (region_impurity - region_impurity.min().item()) / (region_impurity.max().item() - region_impurity.min().item())
-score = region_impurity * prediction_uncertainty
-
-fig, axes = plt.subplots(1, 2, constrained_layout = True) # constrained_layout = True
-axes[0].imshow(region_impurity.squeeze(0).squeeze(0).cpu())
-axes[0].xaxis.set_visible(False)
-axes[0].yaxis.set_visible(False)
-axes[0].set_title('hyper_impurity')
-axes[1].imshow(score.squeeze(0).squeeze(0).cpu())
-axes[1].xaxis.set_visible(False)
-axes[1].yaxis.set_visible(False)
-axes[1].set_title('hyper_impurity*hyper_certainty')
-fig.suptitle('new score with K='+str(K))
-plt.savefig('debug_'+str(K)+'.png')
-plt.close()
-'''

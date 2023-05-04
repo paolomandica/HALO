@@ -1,7 +1,5 @@
-import logging
 import os
 import pytorch_lightning as pl
-import torch.utils.data as data
 import numpy as np
 import torch
 import torch.nn as nn
@@ -14,15 +12,13 @@ from core.configs import cfg
 from core.datasets.dataset_path_catalog import DatasetCatalog
 from core.loss.local_consistent_loss import LocalConsistentLoss
 from core.models import build_feature_extractor, build_classifier
-from core.utils.misc import AverageMeter, load_checkpoint, load_checkpoint_ripu
+from core.utils.misc import load_checkpoint
 from core.loss.negative_learning_loss import NegativeLearningLoss
 from core.active.build import PixelSelection, RegionSelection, OracleAL, OracleMixedAL
 
-import matplotlib.pyplot as plt
 from core.utils.visualize import visualize_wrong
 
-CITYSCAPES_MEAN = torch.Tensor([123.675, 116.28, 103.53]).reshape(1, 1, 3).numpy()
-CITYSCAPES_STD = torch.Tensor([58.395, 57.12, 57.375]).reshape(1, 1, 3).numpy()
+NUM_WORKERS = 4
 
 np.random.seed(cfg.SEED+1)
 VIZ_LIST = list(np.random.randint(0, 500, 20))
@@ -41,15 +37,8 @@ class BaseLearner(pl.LightningModule):
 
         # resume checkpoint if needed
         if cfg.resume:
-            print("Loading checkpoint from {}".format(cfg.resume))
-            if 'step' in cfg.resume:
-                load_checkpoint(self.feature_extractor, cfg.resume, module='feature_extractor')
-                load_checkpoint(self.classifier, cfg.resume, module='classifier')
-            elif 'iter' in cfg.resume:
-                load_checkpoint_ripu(self.feature_extractor, cfg.resume, module='feature_extractor')
-                load_checkpoint_ripu(self.classifier, cfg.resume, module='classifier')
-            else:
-                raise NotImplementedError('Unknown checkpoint type')
+            load_checkpoint(self.feature_extractor, cfg.resume, module='feature_extractor')
+            load_checkpoint(self.classifier, cfg.resume, module='classifier')
 
         # create criterion
         self.criterion = nn.CrossEntropyLoss(ignore_index=255)
@@ -162,10 +151,10 @@ class BaseLearner(pl.LightningModule):
         mAcc = accuracy_class.mean() * 100
         aAcc = intersections.sum() / (targets.sum() + 1e-10) * 100
 
-        # self.print metrics table style
-        self.print('\nmIoU: {:.2f}'.format(mIoU))
-        self.print('mAcc: {:.2f}'.format(mAcc))
-        self.print('aAcc: {:.2f}\n'.format(aAcc))
+        # print metrics table style
+        print('\nmIoU: {:.2f}'.format(mIoU))
+        print('mAcc: {:.2f}'.format(mAcc))
+        print('aAcc: {:.2f}\n'.format(aAcc))
 
         # log metrics
         self.log('mIoU', mIoU, on_step=False, on_epoch=True, sync_dist=True, prog_bar=True)
@@ -199,7 +188,6 @@ class BaseLearner(pl.LightningModule):
         if len(self.trainer.optimizers) == 2:
             classifier_lr = self.trainer.optimizers[1].param_groups[0]['lr']
             self.log('classifier_lr', classifier_lr, on_step=True, on_epoch=False)
-        
 
 
 class SourceLearner(BaseLearner):
@@ -237,7 +225,7 @@ class SourceLearner(BaseLearner):
             dataset=train_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
             shuffle=True,
-            num_workers=4,
+            num_workers=NUM_WORKERS,
             pin_memory=True,
             drop_last=True,
             persistent_workers=True,)
@@ -249,7 +237,7 @@ class SourceLearner(BaseLearner):
             dataset=test_set,
             batch_size=self.cfg.TEST.BATCH_SIZE,
             shuffle=False,
-            num_workers=4,
+            num_workers=NUM_WORKERS,
             pin_memory=True,
             drop_last=False,
             persistent_workers=True,)
@@ -271,7 +259,7 @@ class SourceFreeLearner(BaseLearner):
             dataset=active_set,
             batch_size=1,
             shuffle=False,
-            num_workers=4,
+            num_workers=NUM_WORKERS,
             pin_memory=True,
             drop_last=False,)
 
@@ -375,7 +363,7 @@ class SourceFreeLearner(BaseLearner):
             dataset=train_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
             shuffle=True,
-            num_workers=4,
+            num_workers=NUM_WORKERS,
             pin_memory=True,
             drop_last=True,
             persistent_workers=True,)
@@ -387,7 +375,7 @@ class SourceFreeLearner(BaseLearner):
             dataset=val_set,
             batch_size=self.cfg.TEST.BATCH_SIZE,
             shuffle=False,
-            num_workers=4,
+            num_workers=NUM_WORKERS,
             pin_memory=True,
             drop_last=False,)
         return val_loader
@@ -469,7 +457,7 @@ class SourceTargetLearner(SourceFreeLearner):
             dataset=source_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
             shuffle=True,
-            num_workers=4,
+            num_workers=NUM_WORKERS,
             pin_memory=True,
             drop_last=True,
             persistent_workers=True,)
@@ -477,7 +465,7 @@ class SourceTargetLearner(SourceFreeLearner):
             dataset=target_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
             shuffle=True,
-            num_workers=4,
+            num_workers=NUM_WORKERS,
             pin_memory=True,
             drop_last=True,
             persistent_workers=True,)
@@ -491,7 +479,6 @@ class FullySupervisedLearner(SourceFreeLearner):
         self.local_consistent_loss = LocalConsistentLoss(cfg.MODEL.NUM_CLASSES, cfg.SOLVER.LCR_TYPE)
 
         # remove active learning dataloader
-        active_set = None
         self.active_loader = None
         self.active_round = 0
 
@@ -570,7 +557,7 @@ class FullySupervisedLearner(SourceFreeLearner):
             dataset=source_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
             shuffle=True,
-            num_workers=4,
+            num_workers=NUM_WORKERS,
             pin_memory=True,
             drop_last=True,
             persistent_workers=True,)
@@ -578,7 +565,7 @@ class FullySupervisedLearner(SourceFreeLearner):
             dataset=target_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,
             shuffle=True,
-            num_workers=4,
+            num_workers=NUM_WORKERS,
             pin_memory=True,
             drop_last=True,
             persistent_workers=True,)
@@ -659,11 +646,24 @@ class Test(BaseLearner):
         mAcc = round(accuracy_class.mean() * 100, 2)
         aAcc = round(intersections.sum() / (targets.sum() + 1e-10) * 100, 2)
 
-        # self.print metrics table style
-        self.print()
-        self.print('mIoU: {:.2f}'.format(mIoU))
-        self.print('mAcc: {:.2f}'.format(mAcc))
-        self.print('aAcc: {:.2f}\n'.format(aAcc))
+        # print IoU per class
+        print('\n\n')
+        print('{:<20}  {:<20}  {:<20}'.format('Class', 'IoU (%)', 'Accuracy (%)'))
+        for i in range(cfg.MODEL.NUM_CLASSES):
+            print('{:<20}  {:<20.2f}  {:<20.2f}'.format(self.class_names[i], iou_class[i] * 100, accuracy_class[i] * 100))
+
+        # print mIoUs in LateX format
+        print()
+        print('mIoU in LateX format:')
+        delimiter = ' & '
+        latex_iou_class = delimiter.join(map(lambda x: '{:.1f}'.format(x*100), iou_class))
+        print(latex_iou_class)
+
+        # print metrics table style
+        print()
+        print('mIoU:\t {:.2f}'.format(mIoU))
+        print('mAcc:\t {:.2f}'.format(mAcc))
+        print('aAcc:\t {:.2f}\n'.format(aAcc))
 
         # log metrics
         self.log('mIoU', mIoU, on_step=False, on_epoch=True, sync_dist=False, prog_bar=True)
@@ -672,11 +672,12 @@ class Test(BaseLearner):
 
     def test_dataloader(self):
         test_set = build_dataset(self.cfg, mode='test', is_source=False)
+        self.class_names = test_set.trainid2name
         test_loader = DataLoader(
             dataset=test_set,
             batch_size=1,
             shuffle=False,
-            num_workers=2,
+            num_workers=8,
             pin_memory=True,
             drop_last=False,)
         return test_loader

@@ -6,8 +6,6 @@ import numpy as np
 from PIL import Image
 
 import torch
-from torch import nn
-import torch.nn.init as initer
 from core.configs import cfg
 
 
@@ -17,25 +15,6 @@ def mkdir(path):
     except OSError as e:
         if e.errno != errno.EEXIST:
             raise
-
-
-class AverageMeter(object):
-    """Computes and stores the average and current value"""
-
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
 
 
 def intersectionAndUnion(output, target, K, ignore_index=255):
@@ -151,10 +130,18 @@ def parse_args():
 
 def load_checkpoint(model, path, module='feature_extractor'):
     print("Loading checkpoint from {}".format(path))
-    checkpoint = torch.load(path, map_location=torch.device('cpu'))['state_dict']
-    model_weights = {k: v for k, v in checkpoint.items() if k.startswith(module)}
-    model_weights = OrderedDict([[k.split(module + '.')[-1], v.cpu()] for k, v in model_weights.items()])
-    model.load_state_dict(model_weights)
+    if str(path).endswith('.ckpt'):
+        checkpoint = torch.load(path, map_location=torch.device('cpu'))['state_dict']
+        model_weights = {k: v for k, v in checkpoint.items() if k.startswith(module)}
+        model_weights = OrderedDict([[k.split(module + '.')[-1], v.cpu()] for k, v in model_weights.items()])
+        model.load_state_dict(model_weights)
+    elif str(path).endswith('.pth'):
+        checkpoint = torch.load(cfg.resume, map_location=torch.device('cpu'))
+        model_weights = checkpoint[module]
+        model_weights = strip_prefix_if_present(checkpoint[module], 'module.')
+        model.load_state_dict(model_weights)
+    else:
+        raise NotImplementedError('Only support .ckpt and .pth file')
 
 
 def strip_prefix_if_present(state_dict, prefix):
@@ -165,11 +152,3 @@ def strip_prefix_if_present(state_dict, prefix):
     for key, value in state_dict.items():
         stripped_state_dict[key.replace(prefix, "")] = value
     return stripped_state_dict
-
-
-def load_checkpoint_ripu(model, path, module='feature_extractor'):
-    print("Loading checkpoint from {}".format(path))
-    checkpoint = torch.load(cfg.resume, map_location=torch.device('cpu'))
-    model_weights = checkpoint[module]
-    # model_weights = strip_prefix_if_present(checkpoint[module], 'module.')
-    model.load_state_dict(model_weights)

@@ -3,7 +3,7 @@ MODEL:
   WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
   FREEZE_BN: True
   HYPER: True
-  REDUCED_CHANNELS: 64      # 256 or 10
+  REDUCED_CHANNELS: 64
   WEIGHTED_NORM: True
 DATASETS:
   SOURCE_TRAIN: "gtav_train"
@@ -18,7 +18,7 @@ SOLVER:
   GPUS: [4,5,6,7]
   BASE_LR: 1e-3
   NUM_ITER: 60000
-  CHECKPOINT_PERIOD: 500
+  CHECKPOINT_PERIOD: 5000
   BATCH_SIZE: 2
 ACTIVE:
   NAME: 'AL-RIPU'
@@ -34,8 +34,7 @@ TEST:
   VIZ_WRONG: False
 TEST:
   BATCH_SIZE: 1
-resume: 'results/pretrain_gtav/hyper_v3plus_ch_64_WN/model_global_step=25998.0_mIoU=38.99.ckpt'
-# checkpoint: 'results/source_target/hyper_v3plus_RA_ripu_64/epoch=0-step=20000.ckpt'
+resume: 'results/pretrain/hyper_v3plus_ch_64_WN/model_global_step=25998.0_mIoU=38.99.ckpt'
 OUTPUT_DIR: 'results/source_target/hyper_v3plus_64_WN_fully_sup'
 DEBUG: 0
-PROTOCOL: 'source_target'   # source | source_target | source_free
+PROTOCOL: 'fully_sup'
