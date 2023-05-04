@@ -58,10 +58,7 @@ class BaseLearner(pl.LightningModule):
         if flip:
             image = torch.cat([image, torch.flip(image, [3])], 0)
 
-        if self.hyper:
-            output, embed = self.classifier(self.feature_extractor(image))
-        else:
-            output, embed = self.classifier(self.feature_extractor(image))
+        output, embed = self.classifier(self.feature_extractor(image))
 
         if save_wrong_path:
             dir_path = os.path.join(self.cfg.OUTPUT_DIR, 'viz')
