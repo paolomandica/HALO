@@ -1,12 +1,25 @@
-import math
-from typing import Optional
 import json
+import math
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from core.configs import cfg
+
+
+def init_conv_layer(conv, size, in_channels=None):
+    weight = torch.ones((size, size), dtype=torch.float32)
+    weight = weight.unsqueeze(dim=0).unsqueeze(dim=0)
+    if in_channels is not None:
+        weight = weight.repeat([in_channels, 1, 1, 1])
+    weight = nn.Parameter(weight)
+    conv.weight = weight
+    conv.requires_grad_(False)
+
+
+def normalize_map(x):
+    return (x - x.min().item()) / (x.max().item() - x.min().item())
 
 
 class FloatingRegionScore(nn.Module):
@@ -22,39 +35,21 @@ class FloatingRegionScore(nn.Module):
 
         if purity_type is None:
             purity_type = cfg.ACTIVE.PURITY
-        else:
-            purity_type = purity_type
 
-        if purity_type == 'hyper':
-            self.K = K
-            self.purity_conv = nn.Conv2d(in_channels=self.K, out_channels=self.K, kernel_size=3,
-                                         stride=1, padding=int(3 / 2), bias=False,
-                                         padding_mode='zeros', groups=self.K)
-            weight = torch.ones((3, 3), dtype=torch.float32)
-            weight = weight.unsqueeze(dim=0).unsqueeze(dim=0)
-            weight = weight.repeat([self.K, 1, 1, 1])
-            weight = nn.Parameter(weight)
-            self.purity_conv.weight = weight
-            self.purity_conv.requires_grad_(False)
-        else:
-            self.purity_conv = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=size,
-                                         stride=1, padding=int(size / 2), bias=False,
-                                         padding_mode=padding_mode, groups=in_channels)
-            weight = torch.ones((size, size), dtype=torch.float32)
-            weight = weight.unsqueeze(dim=0).unsqueeze(dim=0)
-            weight = weight.repeat([in_channels, 1, 1, 1])
-            weight = nn.Parameter(weight)
-            self.purity_conv.weight = weight
-            self.purity_conv.requires_grad_(False)
-
+        # init entropy_conv
         self.entropy_conv = nn.Conv2d(in_channels=1, out_channels=1, kernel_size=size,
                                       stride=1, padding=int(size / 2), bias=False,
                                       padding_mode=padding_mode)
-        weight = torch.ones((size, size), dtype=torch.float32)
-        weight = weight.unsqueeze(dim=0).unsqueeze(dim=0)
-        weight = nn.Parameter(weight)
-        self.entropy_conv.weight = weight
-        self.entropy_conv.requires_grad_(False)
+        init_conv_layer(self.entropy_conv, size)
+
+        # init purity_conv
+        if purity_type == 'hyper':
+            self.K, size, in_channels = K, 3, K
+
+        self.purity_conv = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=size,
+                                     stride=1, padding=int(size / 2), bias=False,
+                                     padding_mode=padding_mode, groups=in_channels)
+        init_conv_layer(self.purity_conv, size, in_channels=in_channels)
 
     def compute_region_uncertainty(self, unc_type, logit, p, decoder_out, normalize=False):
         if unc_type == 'entropy':
@@ -74,9 +69,14 @@ class FloatingRegionScore(nn.Module):
         else:
             raise NotImplementedError(
                 "unc_type '{}' not implemented".format(unc_type))
+
         if normalize:
             region_uncertainty = (region_uncertainty - region_uncertainty.min().item()) / (
                 region_uncertainty.max().item() - region_uncertainty.min().item())
+
+        if unc_type != 'none':
+            region_uncertainty = self.entropy_conv(region_uncertainty.float())
+
         return region_uncertainty
 
     def quantize_uncert_map(self, decoder_out, type='kmeans', cluster_centers=None):
@@ -108,18 +108,15 @@ class FloatingRegionScore(nn.Module):
         one_hot = one_hot.permute((2, 0, 1)).unsqueeze(dim=0)  # [1, 19, h, w]
         summary = self.purity_conv(one_hot)  # [1, 19, h, w]
         count = torch.sum(summary, dim=1, keepdim=True)  # [1, 1, h, w]
-
         dist = summary / count
         region_impurity = torch.sum(-dist * torch.log(dist + 1e-6),
                                     dim=1, keepdim=True) / math.log(K)
-
         if normalize:
-            region_impurity = (region_impurity - region_impurity.min().item()) / \
-                (region_impurity.max().item() - region_impurity.min().item())
-
+            region_impurity = normalize_map(region_impurity)
         return region_impurity, count
 
-    def forward(self, logit: torch.Tensor, decoder_out: torch.Tensor = None, unc_type: str = None, pur_type: str = None, normalize: bool = False, alpha: float = None, cluster_centers=None):
+    def forward(self, logit: torch.Tensor, decoder_out: torch.Tensor = None, unc_type: str = None,
+                pur_type: str = None, normalize: bool = False, cluster_centers=None):
         """
         Compute regions score, impurity and uncertainty.
 
@@ -128,8 +125,7 @@ class FloatingRegionScore(nn.Module):
             decoder_out: an n-dimensional Tensor
             unc_type: type of uncertainty to compute (entropy, hyperbolic, certainty, none)
             pur_type: type of impurity to compute (ripu, none)
-            normalize: normalize the impurity and uncertainty
-            alpha: weight of hyperbolic uncertainty mixed with entropy uncertainty
+            normalize: normalize the impurity and uncertainty maps
 
         Return:
             score, purity, entropy
@@ -143,27 +139,8 @@ class FloatingRegionScore(nn.Module):
             self.entropy_conv = self.entropy_conv.to(logit.device)
             self.purity_conv = self.purity_conv.to(logit.device)
 
-        if alpha is not None:
-            region_uncertainty_entropy = self.compute_region_uncertainty(
-                'entropy', logit, p, decoder_out)
-            region_uncertainty_hyper = self.compute_region_uncertainty(
-                'hyperbolic', logit, p, decoder_out)
-            region_uncertainty = (
-                1-alpha) * region_uncertainty_entropy + alpha * region_uncertainty_hyper
-        else:
-            region_uncertainty = self.compute_region_uncertainty(
-                unc_type, logit, p, decoder_out)
-
-        if unc_type == 'none':
-            region_sum_uncert = region_uncertainty
-        else:
-            region_sum_uncert = self.entropy_conv(
-                region_uncertainty.float())  # [1, 1, h, w]
-
-        # one_hot = F.one_hot(predict, num_classes=self.in_channels).float()
-        # one_hot = one_hot.permute((2, 0, 1)).unsqueeze(dim=0)  # [1, 19, h, w]
-        # summary = self.purity_conv(one_hot)  # [1, 19, h, w]
-        # count = torch.sum(summary, dim=1, keepdim=True)  # [1, 1, h, w]
+        region_uncertainty = self.compute_region_uncertainty(
+            unc_type, logit, p, decoder_out)
 
         assert pur_type in [
             'ripu', 'hyper', 'none'], "error: pur_type '{}' not implemented".format(pur_type)
@@ -171,16 +148,9 @@ class FloatingRegionScore(nn.Module):
             predict = torch.argmax(p, dim=0)   # [h, w]
             region_impurity, count = self.compute_region_impurity(
                 predict, self.in_channels, normalize)
-            # dist = summary / count
-            # region_impurity = torch.sum(-dist * torch.log(dist + 1e-6), dim=1, keepdim=True) / math.log(19)
         elif pur_type == 'hyper':
-            # EPS = 1e-5
-            # predict = (decoder_out.squeeze(0).norm(dim=0) * self.K) - 0.5  # [h, w]
-            # predict = torch.clamp(predict, min=-0.5+EPS, max=self.K-0.5-EPS)
-            # predict = torch.round(predict).long()
             predict = self.quantize_uncert_map(
                 decoder_out, type=cfg.ACTIVE.QUANT, cluster_centers=cluster_centers)
-
             region_impurity, count = self.compute_region_impurity(
                 predict, self.K, normalize)
         elif pur_type == 'none':
@@ -189,14 +159,18 @@ class FloatingRegionScore(nn.Module):
             count = torch.ones(
                 (1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32).cuda()
 
-        prediction_uncertainty = region_sum_uncert / count  # [1, 1, h, w]
+        prediction_uncertainty = region_uncertainty / count  # [1, 1, h, w]
 
         if normalize:
-            prediction_uncertainty = (prediction_uncertainty - prediction_uncertainty.min().item()) / (
-                prediction_uncertainty.max().item() - prediction_uncertainty.min().item())
-            region_impurity = (region_impurity - region_impurity.min().item()) / \
-                (region_impurity.max().item() - region_impurity.min().item())
+            prediction_uncertainty = normalize_map(prediction_uncertainty)
+            region_impurity = normalize_map(region_impurity)
 
         score = region_impurity * prediction_uncertainty
-        return score.squeeze(dim=0).squeeze(dim=0), region_impurity.squeeze(dim=0).squeeze(
-            dim=0), prediction_uncertainty.squeeze(dim=0).squeeze(dim=0)
+
+        # squeeze the batch dimension
+        score = score.squeeze(dim=0).squeeze(dim=0)
+        region_impurity = region_impurity.squeeze(dim=0).squeeze(dim=0)
+        prediction_uncertainty = prediction_uncertainty.squeeze(
+            dim=0).squeeze(dim=0)
+
+        return score, region_impurity, prediction_uncertainty

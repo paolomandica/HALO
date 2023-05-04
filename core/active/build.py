@@ -144,13 +144,15 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                         decoder_out, size=size, mode='bilinear', align_corners=True)
 
                 score, _, _ = floating_region_score(
-                    output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type=uncertainty_type, pur_type=purity_type, cluster_centers=cluster_centers)
+                    output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE,
+                    unc_type=uncertainty_type, pur_type=purity_type, cluster_centers=cluster_centers)
                 score_clone = score.clone()
                 score[active] = -float('inf')
 
                 if uncertainty_type == 'certuncert':
                     score_cert, _, _ = floating_region_score_cert(
-                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE, unc_type='certainty', pur_type=purity_type)
+                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE,
+                        unc_type='certainty', pur_type=purity_type)
                     score_cert_clone = score_cert.clone()
 
                     weight_uncert = cfg.ACTIVE.WEIGHT_UNCERT[round_number-1]
