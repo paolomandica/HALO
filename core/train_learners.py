@@ -178,13 +178,14 @@ class BaseLearner(pl.LightningModule):
             optimizer_cls, self.cfg.SOLVER.NUM_ITER, power=self.cfg.SOLVER.LR_POWER)
         return [optimizer_fea, optimizer_cls], [scheduler_fea, scheduler_cls]
     
-    def log_step_and_lr(self):
+    def log_metrics(self, batch_idx):
         self.log('global_step', self.global_step, on_step=True, on_epoch=False)
         base_lr = self.trainer.optimizers[0].param_groups[0]['lr']
         self.log('base_lr', base_lr, on_step=True, on_epoch=False)
         if len(self.trainer.optimizers) == 2:
             classifier_lr = self.trainer.optimizers[1].param_groups[0]['lr']
             self.log('classifier_lr', classifier_lr, on_step=True, on_epoch=False)
+        self.log('batch_idx', batch_idx, on_step=True, on_epoch=False)
 
 
 class SourceLearner(BaseLearner):
@@ -205,7 +206,7 @@ class SourceLearner(BaseLearner):
 
         loss = self.criterion(src_out, src_label)
         self.log('loss', loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
-        self.log_step_and_lr()
+        self.log_metrics(batch_idx)
 
         # manual backward pass
         self.manual_backward(loss)
@@ -279,7 +280,13 @@ class SourceFreeLearner(BaseLearner):
 
     def on_train_batch_start(self, batch, batch_idx):
         if self.local_rank == 0 and batch_idx in self.active_iters and not self.debug:
-            print(f">>>>>>>>>>>>>>>> Active Round {self.active_round} >>>>>>>>>>>>>>>>")
+            # save checkpoint
+            checkpoint_name = "model_before_round_{}.ckpt".format(self.active_round)
+            print("\nSaving checkpoint: {}".format(checkpoint_name))
+            self.trainer.save_checkpoint(os.path.join(self.cfg.OUTPUT_DIR, checkpoint_name))
+
+            # start active round
+            print(f"\n>>>>>>>>>>>>>>>> Active Round {self.active_round} >>>>>>>>>>>>>>>>")
             print(f"batch_idx: {batch_idx}, self.local_rank: {self.local_rank}")
 
             if self.cfg.ACTIVE.SETTING == "RA":
@@ -288,7 +295,6 @@ class SourceFreeLearner(BaseLearner):
                                 classifier=self.classifier,
                                 tgt_epoch_loader=self.active_loader,
                                 round_number=self.active_round)
-
 
             self.log('active_round', self.active_round, on_step=True, on_epoch=False)
             self.active_round += 1
@@ -325,7 +331,7 @@ class SourceFreeLearner(BaseLearner):
             self.log('negative_loss', negative_loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
 
         self.log('loss', loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
-        self.log_step_and_lr()
+        self.log_metrics(batch_idx)
 
         # manual backward pass
         self.manual_backward(loss)
@@ -415,7 +421,7 @@ class SourceTargetLearner(SourceFreeLearner):
             self.log('negative_loss', negative_loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
 
         self.log('loss', loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
-        self.log_step_and_lr()
+        self.log_metrics(batch_idx)
 
         # manual backward pass
         self.manual_backward(loss)
@@ -515,7 +521,7 @@ class FullySupervisedLearner(SourceFreeLearner):
             self.log('negative_loss', negative_loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
 
         self.log('loss', loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
-        self.log_step_and_lr()
+        self.log_metrics(batch_idx)
 
         # manual backward pass
         self.manual_backward(loss)

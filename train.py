@@ -89,20 +89,8 @@ def main():
         filename="model_{global_step}_{mIoU:.2f}",
     )
 
-    # checkcall_2 = PeriodicCheckpoint(
-    #     dirpath=cfg.OUTPUT_DIR,
-    #     every=cfg.SOLVER.CHECKPOINT_PERIOD,
-    # )
-
     callbacks = [checkcall_1]
-
-    # if cfg.PROTOCOL in ['source_target', 'source_free']:
-    #     checkcall_2 = PeriodicCheckpoint(
-    #         dirpath=cfg.OUTPUT_DIR,
-    #         every=cfg.SOLVER.CHECKPOINT_PERIOD,
-    #     )
-    #     callbacks.append(checkcall_2)
-
+    
     # init trainer
     trainer = pl.Trainer(
         accelerator='gpu',
