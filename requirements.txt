@@ -5,7 +5,7 @@ yacs
 numpy
 tqdm
 opencv_contrib_python
-imageio
+imageio==2.9.0
 Pillow
 matplotlib
 scikit_learn
