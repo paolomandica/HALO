@@ -70,6 +70,17 @@ class HyperMapper(object):
             torch.Tensor: Tensor of shape (...)
         """
         return gmath.dist(x, y, k=self.K)
+    
+    def poincare_distance_origin(self, x, dim=-1):
+        """Poincare distance between two points in hyperbolic space.
+
+        Args:
+            x (torch.Tensor): Tensor of shape (..., d)
+
+        Returns:
+            torch.Tensor: Tensor of shape (...)
+        """
+        return gmath.dist0(x, k=self.K, dim=dim)
 
     def cosine_distance(self, x, y):
         """Cosine distance between two points.

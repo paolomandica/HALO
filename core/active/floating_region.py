@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from core.configs import cfg
+from ..utils.hyperbolic import HyperMapper
 
 
 def init_conv_layer(conv, size, in_channels=None):
@@ -51,6 +52,8 @@ class FloatingRegionScore(nn.Module):
                                      padding_mode=padding_mode, groups=in_channels)
         init_conv_layer(self.purity_conv, size, in_channels=in_channels)
 
+        self.mapper = HyperMapper(c=cfg.MODEL.CURVATURE)
+
     def compute_region_uncertainty(self, unc_type, logit, p, decoder_out, normalize=False):
         if unc_type == 'entropy':
             region_uncertainty = torch.sum(-p * torch.log(p + 1e-6), dim=0).unsqueeze(
@@ -59,8 +62,10 @@ class FloatingRegionScore(nn.Module):
             region_uncertainty = 1 - torch.sum(-p * torch.log(p + 1e-6), dim=0).unsqueeze(
                 dim=0).unsqueeze(dim=0) / math.log(19)  # [1, 1, h, w]
         elif unc_type == 'hyperbolic':
-            region_uncertainty = 1 - \
-                decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
+            # region_uncertainty = self.mapper.poincare_distance_origin(decoder_out, dim=1).unsqueeze(dim=1)
+            # region_uncertainty = (region_uncertainty - region_uncertainty.min().item()) / (region_uncertainty.max().item() - region_uncertainty.min().item())
+            # region_uncertainty = 1 - region_uncertainty
+            region_uncertainty = 1 - decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
         elif unc_type == 'certainty':
             region_uncertainty = decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
         elif unc_type == 'none':
