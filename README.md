@@ -23,6 +23,9 @@ conda install -y ipython pip
 # this installs required packages
 pip install -r requirements.txt
 
+# install mmcv
+pip install -U openmim
+mim install mmcv
 ```
 
 ### Data Preparation
