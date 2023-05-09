@@ -46,7 +46,9 @@ def select_pixels_to_label(score, active_regions, active_radius, mask_radius,
                            active, selected, active_mask, ground_truth):
     for pixel in range(active_regions):
         values, indices_h = torch.max(score, dim=0)
-        _, indices_w = torch.max(values, dim=0)
+        max_value, indices_w = torch.max(values, dim=0)
+        if max_value == -float('inf'):
+            break
         w = indices_w.item()
         h = indices_h[w].item()
 

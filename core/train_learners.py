@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import LinearLR, SequentialLR, PolynomialLR
 from geoopt.optim import RiemannianSGD
 
 from core.datasets import build_dataset
@@ -168,15 +169,41 @@ class BaseLearner(pl.LightningModule):
             optim = RiemannianSGD
         else:
             optim = torch.optim.SGD
+
+        # init optimizers
         optimizer_fea = optim(self.feature_extractor.parameters(), lr=self.cfg.SOLVER.BASE_LR,
                               momentum=self.cfg.SOLVER.MOMENTUM, weight_decay=self.cfg.SOLVER.WEIGHT_DECAY)
         optimizer_cls = optim(self.classifier.parameters(), lr=self.cfg.SOLVER.BASE_LR * 10,
                               momentum=self.cfg.SOLVER.MOMENTUM, weight_decay=self.cfg.SOLVER.WEIGHT_DECAY)
-        scheduler_fea = torch.optim.lr_scheduler.PolynomialLR(
-            optimizer_fea, self.cfg.SOLVER.NUM_ITER, power=self.cfg.SOLVER.LR_POWER)
-        scheduler_cls = torch.optim.lr_scheduler.PolynomialLR(
-            optimizer_cls, self.cfg.SOLVER.NUM_ITER, power=self.cfg.SOLVER.LR_POWER)
-        return [optimizer_fea, optimizer_cls], [scheduler_fea, scheduler_cls]
+        optimizers = [optimizer_fea, optimizer_cls]
+
+        # init schedulers
+        num_iters = self.cfg.SOLVER.NUM_ITER // len(self.cfg.SOLVER.GPUS)
+
+        if self.cfg.SOLVER.WARMUP_ITERS > 0:
+            warmup_iters = self.cfg.SOLVER.WARMUP_ITERS
+            num_iters -= warmup_iters
+
+            # feature extractor scheduler
+            linear_fea = LinearLR(optimizer_fea, start_factor=0.01, total_iters=warmup_iters)
+            poly_fea = PolynomialLR(optimizer_fea, num_iters, power=self.cfg.SOLVER.LR_POWER)
+            scheduler_fea = SequentialLR(
+                optimizer_fea, schedulers=[linear_fea, poly_fea], milestones=[warmup_iters])
+            
+            # classifier scheduler
+            linear_cls = LinearLR(optimizer_cls, start_factor=0.01, total_iters=warmup_iters)
+            poly_cls = PolynomialLR(optimizer_cls, num_iters, power=self.cfg.SOLVER.LR_POWER)
+            scheduler_cls = SequentialLR(
+                optimizer_cls, schedulers=[linear_cls, poly_cls], milestones=[warmup_iters])
+        
+        else:
+            scheduler_fea = PolynomialLR(optimizer_fea, num_iters, power=self.cfg.SOLVER.LR_POWER)
+            scheduler_cls = PolynomialLR(
+                optimizer_cls, num_iters, power=self.cfg.SOLVER.LR_POWER)
+        
+        schedulers = [scheduler_fea, scheduler_cls]
+        
+        return optimizers, schedulers
     
     def log_metrics(self, batch_idx):
         self.log('global_step', self.global_step, on_step=True, on_epoch=False)
@@ -219,6 +246,7 @@ class SourceLearner(BaseLearner):
 
     def train_dataloader(self):
         train_set = build_dataset(self.cfg, mode='train', is_source=True)
+        self.data_len = len(train_set)
         train_loader = DataLoader(
             dataset=train_set,
             batch_size=self.cfg.SOLVER.BATCH_SIZE,

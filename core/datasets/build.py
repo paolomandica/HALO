@@ -30,7 +30,6 @@ def build_transform(cfg, mode, is_source):
 def build_dataset(cfg, mode='train', is_source=True, epochwise=False, empty=False):
     assert mode in ['train', 'val', 'test', 'active']
     transform = build_transform(cfg, mode, is_source)
-    print(transform)
     iters = None
     if mode == 'train' or mode == 'active':
         if not epochwise:

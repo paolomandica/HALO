@@ -67,7 +67,7 @@ def main():
 
     # init wandb logger
     wandb_logger = None
-    if cfg.WANDB.ENABLE:
+    if cfg.WANDB.ENABLE and not cfg.DEBUG:
         wandb_logger = WandbLogger(project=cfg.WANDB.PROJECT, name=cfg.WANDB.NAME,
                                    entity=cfg.WANDB.ENTITY, group=cfg.WANDB.GROUP,
                                    config=cfg, save_dir='.')
