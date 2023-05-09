@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import LinearLR, SequentialLR, PolynomialLR
+from torch.optim.lr_scheduler import LinearLR, SequentialLR, PolynomialLR, ConstantLR
 from geoopt.optim import RiemannianSGD
 
 from core.datasets import build_dataset
@@ -187,12 +187,14 @@ class BaseLearner(pl.LightningModule):
             # feature extractor scheduler
             linear_fea = LinearLR(optimizer_fea, start_factor=0.01, total_iters=warmup_iters)
             poly_fea = PolynomialLR(optimizer_fea, num_iters, power=self.cfg.SOLVER.LR_POWER)
+            # poly_fea = ConstantLR(optimizer_fea, factor=1., total_iters=num_iters)
             scheduler_fea = SequentialLR(
                 optimizer_fea, schedulers=[linear_fea, poly_fea], milestones=[warmup_iters])
             
             # classifier scheduler
             linear_cls = LinearLR(optimizer_cls, start_factor=0.01, total_iters=warmup_iters)
             poly_cls = PolynomialLR(optimizer_cls, num_iters, power=self.cfg.SOLVER.LR_POWER)
+            # poly_cls = ConstantLR(optimizer_cls, factor=1., total_iters=num_iters)
             scheduler_cls = SequentialLR(
                 optimizer_cls, schedulers=[linear_cls, poly_cls], milestones=[warmup_iters])
         
