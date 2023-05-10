@@ -62,10 +62,10 @@ class FloatingRegionScore(nn.Module):
             region_uncertainty = 1 - torch.sum(-p * torch.log(p + 1e-6), dim=0).unsqueeze(
                 dim=0).unsqueeze(dim=0) / math.log(19)  # [1, 1, h, w]
         elif unc_type == 'hyperbolic':
-            # region_uncertainty = self.mapper.poincare_distance_origin(decoder_out, dim=1).unsqueeze(dim=1)
-            # region_uncertainty = (region_uncertainty - region_uncertainty.min().item()) / (region_uncertainty.max().item() - region_uncertainty.min().item())
-            # region_uncertainty = 1 - region_uncertainty
-            region_uncertainty = 1 - decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
+            # region_uncertainty = 1 - decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
+            region_uncertainty = self.mapper.poincare_distance_origin(decoder_out, dim=1).unsqueeze(dim=1)
+            region_uncertainty = (region_uncertainty - region_uncertainty.min().item()) / (region_uncertainty.max().item() - region_uncertainty.min().item())
+            region_uncertainty = 1 - region_uncertainty
         elif unc_type == 'certainty':
             region_uncertainty = decoder_out.norm(dim=1, p=2).unsqueeze(dim=1)
         elif unc_type == 'none':
@@ -90,7 +90,10 @@ class FloatingRegionScore(nn.Module):
 
         if type == 'uniform':
             EPS = 1e-5
-            decoder_out_norm = decoder_out.squeeze(0).norm(dim=0)
+            # decoder_out_norm = decoder_out.squeeze(0).norm(dim=0)
+            decoder_out_norm = self.mapper.poincare_distance_origin(decoder_out, dim=1).squeeze(0)
+            decoder_out_norm = (decoder_out_norm - decoder_out_norm.min().item()) / (decoder_out_norm.max().item() - decoder_out_norm.min().item())
+            decoder_out_norm = 1 - decoder_out_norm
             norm_min, norm_max = decoder_out_norm.min(), decoder_out_norm.max()
             decoder_out_norm = (decoder_out_norm - norm_min) / \
                 (norm_max - norm_min)
