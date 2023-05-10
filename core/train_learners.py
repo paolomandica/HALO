@@ -656,9 +656,9 @@ class Test(BaseLearner):
         iou_class = intersections / (unions + 1e-10)
         accuracy_class = intersections / (targets + 1e-10)
 
-        mIoU = round(iou_class.mean() * 100, 2)
-        mAcc = round(accuracy_class.mean() * 100, 2)
-        aAcc = round(intersections.sum() / (targets.sum() + 1e-10) * 100, 2)
+        mIoU = round(iou_class.mean() * 100, 1)
+        mAcc = round(accuracy_class.mean() * 100, 1)
+        aAcc = round(intersections.sum() / (targets.sum() + 1e-10) * 100, 1)
 
         # print IoU per class
         print('\n\n')
@@ -671,13 +671,24 @@ class Test(BaseLearner):
         print('mIoU in LateX format:')
         delimiter = ' & '
         latex_iou_class = delimiter.join(map(lambda x: '{:.1f}'.format(x*100), iou_class))
-        print(latex_iou_class)
+        print(latex_iou_class + ' & ' + '{:.1f}'.format(mIoU))
 
         # print metrics table style
+        # print()
+        # print('mIoU:\t {:.1f}'.format(mIoU))
+        # print('mAcc:\t {:.1f}'.format(mAcc))
+        # print('aAcc:\t {:.1f}'.format(aAcc))
+
+        # compute mIoU* for synthia-to-cityscapes
+        if cfg.MODEL.NUM_CLASSES == 16:
+            mIoU_star = 0.
+            for i in range(16):
+                if i not in [3, 4, 5]:
+                    mIoU_star += iou_class[i]
+            mIoU_star = round(mIoU_star / 13 * 100, 1)
+            # print('mIoU*:\t {:.1f}\n'.format(mIoU_star))
+            self.log('mIoU*', mIoU_star, on_step=False, on_epoch=True, sync_dist=False, prog_bar=True)
         print()
-        print('mIoU:\t {:.2f}'.format(mIoU))
-        print('mAcc:\t {:.2f}'.format(mAcc))
-        print('aAcc:\t {:.2f}\n'.format(aAcc))
 
         # log metrics
         self.log('mIoU', mIoU, on_step=False, on_epoch=True, sync_dist=False, prog_bar=True)
