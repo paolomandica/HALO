@@ -228,10 +228,7 @@ class SourceLearner(BaseLearner):
 
         src_input, src_label = batch['img'], batch['label']   # shape [B, 3, 720, 1280]
         src_out = self.forward(src_input)
-        if self.hyper:
-            src_out = src_out[0]
-        else:
-            src_out = src_out[0]
+        src_out = src_out[0]
 
         loss = self.criterion(src_out, src_label)
         self.log('loss', loss.item(), on_step=True, on_epoch=False, sync_dist=True, prog_bar=True)
@@ -303,7 +300,6 @@ class SourceFreeLearner(BaseLearner):
         denom = self.cfg.SOLVER.NUM_ITER * self.cfg.SOLVER.BATCH_SIZE * len(self.cfg.SOLVER.GPUS)
         self.active_iters = [int(x*self.data_len/denom) for x in self.cfg.ACTIVE.SELECT_ITER]
         self.print("\nActive learning at iters: {}\n".format(self.active_iters))
-        # self.active_iters = [x * self.cfg.SOLVER.BATCH_SIZE for x in self.active_iters]
 
     def on_train_start(self):
         self.compute_active_iters()

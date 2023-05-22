@@ -24,24 +24,6 @@ np.random.seed(cfg.SEED+1)
 VIZ_LIST = list(np.random.randint(0, 500, 20))
 
 
-def find_cluster_centers(tgt_epoch_loader, feature_extractor, classifier, K):
-    with torch.no_grad():
-        embed_norm_tensor = torch.empty(0, 160, 320).cuda()
-        for tgt_data in tqdm(tgt_epoch_loader):
-            tgt_input = tgt_data['img']
-            tgt_input = tgt_input.cuda(non_blocking=True)
-            tgt_size = tgt_input.shape[-2:]
-            tgt_feat = feature_extractor(tgt_input)
-            tgt_out, decoder_out = classifier(tgt_feat, size=tgt_size)
-            embed_norm_tensor = torch.cat(
-                (embed_norm_tensor, decoder_out.norm(dim=1)), dim=0)
-
-        embed_norm_tensor = embed_norm_tensor.reshape(-1, 1)
-        _, cluster_centers = kmeans(X=embed_norm_tensor, num_clusters=K,
-                                    distance='euclidean', device=embed_norm_tensor.device)
-    return cluster_centers
-
-
 def select_pixels_to_label(score, active_regions, active_radius, mask_radius,
                            active, selected, active_mask, ground_truth):
     for pixel in range(active_regions):
@@ -95,16 +77,7 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
     K = cfg.ACTIVE.K
 
     floating_region_score = FloatingRegionScore(
-        in_channels=cfg.MODEL.NUM_CLASSES, size=2 * active_radius + 1,
-        purity_type=purity_type, K=K)
-
-    if uncertainty_type == 'certuncert':
-        floating_region_score_cert = copy.deepcopy(floating_region_score)
-
-    cluster_centers = None
-    if cfg.ACTIVE.QUANT == 'kmeans':
-        cluster_centers = find_cluster_centers(
-            tgt_epoch_loader, feature_extractor, classifier, K)
+        in_channels=cfg.MODEL.NUM_CLASSES, size=2*active_radius+1, purity_type=purity_type, K=K)
 
     with torch.no_grad():
         idx = 0
@@ -147,50 +120,17 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
 
                 score, _, _ = floating_region_score(
                     output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE,
-                    unc_type=uncertainty_type, pur_type=purity_type, cluster_centers=cluster_centers)
+                    unc_type=uncertainty_type, pur_type=purity_type)
                 score_clone = score.clone()
                 score[active] = -float('inf')
 
-                if uncertainty_type == 'certuncert':
-                    score_cert, _, _ = floating_region_score_cert(
-                        output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE,
-                        unc_type='certainty', pur_type=purity_type)
-                    score_cert_clone = score_cert.clone()
-
-                    weight_uncert = cfg.ACTIVE.WEIGHT_UNCERT[round_number-1]
-                    active_regions = math.ceil(
-                        weight_uncert * ((num_pixel_cur * active_ratio) / per_region_pixels))
-
-                    score, active, selected, active_mask = select_pixels_to_label(
-                        score, active_regions, active_radius, mask_radius,
-                        active, selected, active_mask, ground_truth
-                    )
-                    active_mask_unc = active_mask.clone()
-
-                    score_cert[active] = -float('inf')
-                    active_regions = math.floor(
-                        (1-weight_uncert) * ((num_pixel_cur * active_ratio) / per_region_pixels))
-                    active_mask_cert = torch.zeros_like(active_mask)
-
-                    score_cert, active, selected, active_mask = select_pixels_to_label(
-                        score_cert, active_regions, active_radius, mask_radius,
-                        active, selected, active_mask, ground_truth
-                    )
-                    active_mask_cert = active_mask.clone()
-
-                else:
-                    active_regions = math.ceil(
-                        num_pixel_cur * active_ratio / per_region_pixels)
-                    score, active, selected, active_mask = select_pixels_to_label(
-                        score, active_regions, active_radius, mask_radius,
-                        active, selected, active_mask, ground_truth
-                    )
+                active_regions = math.ceil(num_pixel_cur * active_ratio / per_region_pixels)
+                score, active, selected, active_mask = select_pixels_to_label(
+                    score, active_regions, active_radius, mask_radius,
+                    active, selected, active_mask, ground_truth
+                )
 
                 active_mask_np = to_np_array(active_mask)
-                if uncertainty_type == 'certuncert':
-                    active_mask_unc_np = to_np_array(active_mask_unc)
-                    active_mask_cert_np = to_np_array(active_mask_cert)
-
                 active_mask_IMG = Image.fromarray(active_mask_np)
                 active_mask_IMG.save(path2mask[i])
                 indicator = {
@@ -205,22 +145,9 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                 img_np = (img_np * CITYSCAPES_STD +
                           CITYSCAPES_MEAN).astype(np.uint8)
                 name = tgt_data['name'][0]
-
                 score_np = score_clone.cpu().numpy()
-
-                if uncertainty_type == 'certuncert':
-                    score_cert_np = score_cert_clone.cpu().numpy()
-                    name_unc = name.rsplit(
-                        '_', 1)[0]+'_unc_'+name.rsplit('_', 1)[1]
-                    visualization_plots(img_np, score_np, active_mask_unc_np,
-                                        round_number, name_unc, title='Hyper Impurity + Entropy')
-                    name_cert = name.rsplit(
-                        '_', 1)[0]+'_cert_'+name.rsplit('_', 1)[1]
-                    visualization_plots(img_np, score_cert_np, active_mask_cert_np,
-                                        round_number, name_cert, title='Impurity + Certainty')
-                else:
-                    visualization_plots(
-                        img_np, score_np, active_mask_np, round_number, name)
+                visualization_plots(
+                    img_np, score_np, active_mask_np, round_number, name)
             idx += 1
 
     feature_extractor.train()
