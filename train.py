@@ -1,4 +1,5 @@
 from pathlib import Path
+import random
 import setproctitle
 import warnings
 import torch
@@ -13,6 +14,10 @@ import pytorch_lightning as pl
 
 warnings.filterwarnings('ignore')
 
+seed = cfg.SEED
+if seed == -1:
+    seed = random.randint(0, 100000)
+pl.seed_everything(seed)
 torch.backends.cudnn.benchmark = True
 # torch.use_deterministic_algorithms(True)
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -40,6 +45,7 @@ class PeriodicCheckpoint(ModelCheckpoint):
             self.filename = f"model_{pl_module.global_step}"
             filepath = Path(self.dirpath) + self.filename + '.ckpt'
             trainer.save_checkpoint(filepath)
+
 
 class ActiveRoundCheckpoint(ModelCheckpoint):
     def __init__(self, dirpath: str):
@@ -90,7 +96,7 @@ def main():
     )
 
     callbacks = [checkcall_1]
-    
+
     # init trainer
     trainer = pl.Trainer(
         accelerator='gpu',
@@ -117,6 +123,7 @@ def main():
     else:
         trainer.fit(learner)
 
+
 if __name__ == '__main__':
     main()
 
@@ -128,3 +135,11 @@ if __name__ == '__main__':
             shutil.rmtree(path)
         except:
             print("Failed to remove gtIndicator directory.")
+
+    # remove gtMask subdirectory
+    path = os.path.join(cfg.OUTPUT_DIR, 'gtMask')
+    try:
+        print("Removing gtMask directory...")
+        shutil.rmtree(path)
+    except:
+        print("Failed to remove gtMask directory.")

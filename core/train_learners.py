@@ -370,6 +370,11 @@ class SourceFreeLearner(BaseLearner):
         for sched in self.lr_schedulers():
             sched.step()
 
+    def on_train_end(self):
+        print("\nSaving last checkpoint...")
+        self.trainer.save_checkpoint(os.path.join(self.cfg.OUTPUT_DIR, 'last.ckpt'))
+
+
     def train_dataloader(self):
         train_set = build_dataset(self.cfg, mode='train', is_source=False)
         self.data_len = len(train_set)

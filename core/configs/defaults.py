@@ -51,7 +51,7 @@ _C.SOLVER.BASE_LR = 2.5e-4
 _C.SOLVER.LR_POWER = 0.5
 _C.SOLVER.MOMENTUM = 0.9
 _C.SOLVER.WEIGHT_DECAY = 0.0005
-_C.SOLVER.WARMUP_ITERS = 0
+_C.SOLVER.WARMUP_ITERS = 600
 
 # 4 images per batch, two for source and two for target
 _C.SOLVER.BATCH_SIZE = 2

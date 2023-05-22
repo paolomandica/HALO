@@ -21,7 +21,7 @@ class DatasetCatalog(object):
         },
         "synthia_train": {
             "data_dir": "synthia",
-            "data_list": "synthia/synthia_train_list.txt"
+            "data_list": "synthia_train_list.txt"
         },
         "cityscapes_train": {
             "data_dir": "cityscapes",
