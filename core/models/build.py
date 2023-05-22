@@ -37,7 +37,8 @@ def build_classifier(cfg):
     elif deeplab_name == 'deeplabv3plus' and not hyper:
         classifier = DepthwiseSeparableASPP(inplanes=2048, dilation_series=[1, 6, 12, 18],
                                             padding_series=[1, 6, 12, 18], num_classes=cfg.MODEL.NUM_CLASSES,
-                                            norm_layer=bn_layer, weighted_norm=cfg.MODEL.WEIGHTED_NORM)
+                                            norm_layer=bn_layer, weighted_norm=cfg.MODEL.WEIGHTED_NORM,
+                                            reduced_channels=cfg.MODEL.REDUCED_CHANNELS)
     elif deeplab_name == 'deeplabv3plus' and hyper:
         classifier = DepthwiseSeparableASPP_Hyper(inplanes=2048, dilation_series=[1, 6, 12, 18],
                                                   padding_series=[1, 6, 12, 18], num_classes=cfg.MODEL.NUM_CLASSES,
