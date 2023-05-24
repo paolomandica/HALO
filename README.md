@@ -14,8 +14,8 @@ We propose ...
 Step-by-step installation
 
 ```bash
-conda create --name hypersegal -y python=3.9
-conda activate hypersegal
+conda create --name halo -y python=3.9
+conda activate halo
 
 # this installs the right pip and dependencies for the fresh python
 conda install -y ipython pip
@@ -66,6 +66,8 @@ The data folder should be structured as follows:
 
 ### Usage
 
+The config files for the different ADA training protocols can be found in the `configs` directory.
+
 #### Training
 
 ```bash
@@ -80,4 +82,4 @@ python test.py -cfg CONFIG_PATH
 
 
 ## Acknowledgements
-This project is based on the following open-source projects: [FADA](https://github.com/JDAI-CV/FADA) and [SDCA](https://github.com/BIT-DA/SDCA). We thank their authors for making the source code publically available.
+This project is based on the [RIPU](https://github.com/BIT-DA/RIPU) open-source project, with our re-implementation in PyTorch Lightning for multi-GPU ADA. We thank the authors for making the source code publically available.
