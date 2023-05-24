@@ -2,6 +2,7 @@ MODEL:
   NAME: "deeplabv3plus_resnet101"
   WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
   FREEZE_BN: True
+  NUM_CLASSES: 16
   HYPER: True
   REDUCED_CHANNELS: 64
   WEIGHTED_NORM: True
@@ -14,14 +15,12 @@ INPUT:
   TARGET_INPUT_SIZE_TRAIN: (1280, 640)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
-  # GPUS: [0,1,2,3]
-  GPUS: [4,5,6,7]
+  GPUS: [0,1,2,3]
   BASE_LR: 1e-3
   NUM_ITER: 60000
-  CHECKPOINT_PERIOD: 5000
   BATCH_SIZE: 2
 ACTIVE:
-  NAME: 'AL-RIPU'
+  NAME: 'HALO'
   RATIO: 1.
 WANDB:
   ENABLE: True
@@ -29,12 +28,7 @@ WANDB:
   NAME: 'hyper_v3plus_64_WN_fully_sup'
   GROUP: 'source_target'
   ENTITY: 'pinlab-sapienza'
-TEST:
-  VIZ_SCORE: False
-  VIZ_WRONG: False
-TEST:
-  BATCH_SIZE: 1
-resume: 'results/pretrain_synthia/hyper_v3plus_ch_64_WN/model.ckpt'
-OUTPUT_DIR: 'results/source_target/hyper_v3plus_64_WN_fully_sup'
+resume: 'results/pretrain_synthia/CHECKPOINT_PATH.ckpt'
+OUTPUT_DIR: 'results/source_target_synthia/OUTPUT_PATH'
 DEBUG: 0
 PROTOCOL: 'fully_sup'

@@ -13,16 +13,15 @@ INPUT:
   SOURCE_INPUT_SIZE_TRAIN: (1280, 720)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
-  GPUS: [2, 3, 4, 5]
-  # GPUS: [8, 9]
+  GPUS: [0,1,2,3]
   BATCH_SIZE: 2
   BASE_LR: 1e-3
   NUM_ITER: 60000
 WANDB:
-  ENABLE: False # True
+  ENABLE: True
   NAME: 'synthia_hyper_v3plus_ch_64_temp'
   GROUP: 'synthia_pretraining'
   PROJECT: 'active_domain_adapt'
   ENTITY: 'syn2real'
-OUTPUT_DIR: 'results/pretrain/synthia_hyper_v3plus_ch_64_temp'
+OUTPUT_DIR: 'results/pretrain_synthia/OUTPUT_PATH'
 PROTOCOL: 'source'

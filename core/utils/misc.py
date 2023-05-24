@@ -106,7 +106,7 @@ def parse_args():
                         type=str)
     parser.add_argument("--proctitle",
                         type=str,
-                        default="AL-RIPU",
+                        default="HALO",
                         help="allow a process to change its title", )
     parser.add_argument(
         "opts",

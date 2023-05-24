@@ -5,15 +5,14 @@ from yacs.config import CfgNode as CN
 _C = CN()
 
 _C.MODEL = CN()
-_C.MODEL.NAME = "deeplabv2_resnet101"
+_C.MODEL.NAME = "deeplabv3plus_resnet101"
 _C.MODEL.NUM_CLASSES = 19
-_C.MODEL.DEVICE = "cuda"
 _C.MODEL.WEIGHTS = ""
-_C.MODEL.FREEZE_BN = False
-_C.MODEL.HYPER = False
+_C.MODEL.FREEZE_BN = True
+_C.MODEL.HYPER = True
 _C.MODEL.CURVATURE = 1.
-_C.MODEL.REDUCED_CHANNELS = 512
-_C.MODEL.WEIGHTED_NORM = False
+_C.MODEL.REDUCED_CHANNELS = 64
+_C.MODEL.WEIGHTED_NORM = True
 
 _C.WANDB = CN()
 _C.WANDB.ENABLE = False
@@ -41,13 +40,12 @@ _C.DATASETS.TARGET_TRAIN = ""
 _C.DATASETS.TEST = ""
 
 _C.SOLVER = CN()
-_C.SOLVER.GPUS = [0,1,2,3]
+_C.SOLVER.GPUS = [0, 1, 2, 3]
 _C.SOLVER.NUM_ITER = 60000
-_C.SOLVER.CHECKPOINT_PERIOD = 1000
 
 # optimizer and learning rate
 _C.SOLVER.LR_METHOD = 'poly'
-_C.SOLVER.BASE_LR = 2.5e-4
+_C.SOLVER.BASE_LR = 1e-3
 _C.SOLVER.LR_POWER = 0.5
 _C.SOLVER.MOMENTUM = 0.9
 _C.SOLVER.WEIGHT_DECAY = 0.0005
@@ -68,23 +66,20 @@ _C.SOLVER.LCR_TYPE = "l1"
 
 _C.ACTIVE = CN()
 # active strategy
-_C.ACTIVE.NAME = 'AL-RIPU'
+_C.ACTIVE.NAME = 'HALO'
 _C.ACTIVE.UNCERTAINTY = 'entropy'
 _C.ACTIVE.PURITY = 'hyper'
 _C.ACTIVE.SETTING = 'RA'
-_C.ACTIVE.SELECT_ITER = [0, 15001, 30001, 40001, 50001] # for 5 selection rounds
+_C.ACTIVE.SELECT_ITER = [0, 15000, 30000, 40000, 50000]
 # total selection ratio per image
-_C.ACTIVE.RATIO = 0.022
-# total selected pixel per image
-_C.ACTIVE.PIXELS = 40
+_C.ACTIVE.RATIO = 0.05
 # hyper-parameters
 _C.ACTIVE.RADIUS_K = 1
 _C.ACTIVE.NORMALIZE = True
 _C.ACTIVE.MASK_RADIUS_K = 5
 _C.ACTIVE.K = 100
-_C.ACTIVE.QUANT = 'uniform'
 # visualization of active selection
-_C.ACTIVE.VIZ_MASK = True
+_C.ACTIVE.VIZ_MASK = False
 
 
 # ---------------------------------------------------------------------------- #
@@ -101,7 +96,6 @@ _C.TEST.SAVE_EMBED = False
 # ---------------------------------------------------------------------------- #
 _C.OUTPUT_DIR = ""
 _C.resume = ""
-_C.checkpoint = ""
 _C.SEED = -1
 _C.DEBUG = 0
 _C.PROTOCOL = "source_target"

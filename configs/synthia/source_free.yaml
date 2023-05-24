@@ -15,23 +15,20 @@ INPUT:
   TARGET_INPUT_SIZE_TRAIN: (1280, 640)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
-  # GPUS: [0,1,2,3]
-  GPUS: [4,5,6,7]
+  GPUS: [0,1,2,3]
   BASE_LR: 1e-3
   NUM_ITER: 60000
-  CHECKPOINT_PERIOD: 5000
   BATCH_SIZE: 2
 ACTIVE:
-  NAME: 'AL-RIPU'
+  NAME: 'HALO'
   SETTING: 'RA'
-  SELECT_ITER: [0, 15001, 30001, 40001, 50001]   # [0, 10001, 15001, 20001, 25001] or [0, 15001, 30001, 40001, 50001]
-  RATIO: 0.05     # 0.022  or  0.05  or  1.
-  RADIUS_K: 1      # smaller might be better
-  UNCERTAINTY: 'entropy'   # 'entropy' or 'hyperbolic' or 'certainty' or 'none'
-  PURITY: 'hyper'             # 'ripu' or 'hyper' or 'none'
-  VIZ_MASK: True
+  SELECT_ITER: [0, 15000, 30000, 40000, 50000]
+  RATIO: 0.05
+  RADIUS_K: 1
+  UNCERTAINTY: 'entropy'
+  PURITY: 'hyper'
+  VIZ_MASK: False
   NORMALIZE: True
-  WEIGHT_UNCERT: [0.2, 0.2, 0.35, 0.35, 0.5]
   MASK_RADIUS_K: 5
   K: 100
 WANDB:
@@ -40,12 +37,7 @@ WANDB:
   NAME: 'hyper_dlv3_64_WN_5_perc_entr_hyperimp_K200_RK5'
   GROUP: 'source_free'
   ENTITY: 'pinlab-sapienza'
-TEST:
-  VIZ_SCORE: False
-  VIZ_WRONG: False
-TEST:
-  BATCH_SIZE: 1
-resume: 'results/pretrain_synthia/hyper_v3plus_ch_64_WN/model.ckpt'
-OUTPUT_DIR: 'results/source_free/hyper_dlv3_64_WN_5_perc_entr_hyperimp_K100_RK5'
+resume: 'results/pretrain_synthia/CHECKPOINT_PATH.ckpt'
+OUTPUT_DIR: 'results/source_free_synthia/OUTPUT_PATH'
 DEBUG: 0
 PROTOCOL: 'source_free'
