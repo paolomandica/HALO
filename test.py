@@ -1,11 +1,8 @@
 import setproctitle
 import warnings
-from core.datasets.dataset_path_catalog import DatasetCatalog
 from core.utils.misc import mkdir, parse_args
 from core.configs import cfg
 from core.train_learners import Test
-from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.loggers.wandb import WandbLogger
 import pytorch_lightning as pl
 import os
 
