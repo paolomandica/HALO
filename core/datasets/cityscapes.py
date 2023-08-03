@@ -230,7 +230,7 @@ class cityscapesDataSet(data.Dataset):
         image = Image.open(datafiles["img"]).convert('RGB')
         label = np.array(Image.open(datafiles["label"]), dtype=np.uint8)
         label_mask = None
-        if self.split == 'train' and "extra" not in self.data_root:
+        if self.split == 'train' and self.active and "extra" not in self.data_root:
             label_mask = np.array(Image.open(datafiles["label_mask"]), dtype=np.uint8)
         else:
             # test or val, mask is useless

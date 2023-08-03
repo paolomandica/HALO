@@ -96,10 +96,6 @@ class DatasetCatalog(object):
 
     @staticmethod
     def initMask(cfg):
-        if cfg.DEBUG == 1:
-            for i in range(5):
-                print("Debug without mask initialization!")
-            return
         data_dir = DatasetCatalog.DATASET_DIR
         dataset_name = cfg.DATASETS.TARGET_TRAIN
         if "cityscapes" in dataset_name:
