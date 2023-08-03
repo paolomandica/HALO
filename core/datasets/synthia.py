@@ -122,7 +122,6 @@ class synthiaDataSet(data.Dataset):
 
         image = Image.open(datafiles["img"]).convert('RGB')
         label = np.asarray(imageio.imread(datafiles["label"], format='PNG-FI'))[:, :, 0]  # uint16
-        name = datafiles["name"]
 
         # re-assign labels to match the format of Cityscapes
         label_copy = self.ignore_label * np.ones(label.shape, dtype=np.float32)

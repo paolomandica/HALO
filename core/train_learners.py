@@ -190,23 +190,23 @@ class BaseLearner(pl.LightningModule):
             # poly_fea = ConstantLR(optimizer_fea, factor=1., total_iters=num_iters)
             scheduler_fea = SequentialLR(
                 optimizer_fea, schedulers=[linear_fea, poly_fea], milestones=[warmup_iters])
-            
+
             # classifier scheduler
             linear_cls = LinearLR(optimizer_cls, start_factor=0.01, total_iters=warmup_iters)
             poly_cls = PolynomialLR(optimizer_cls, num_iters, power=self.cfg.SOLVER.LR_POWER)
             # poly_cls = ConstantLR(optimizer_cls, factor=1., total_iters=num_iters)
             scheduler_cls = SequentialLR(
                 optimizer_cls, schedulers=[linear_cls, poly_cls], milestones=[warmup_iters])
-        
+
         else:
             scheduler_fea = PolynomialLR(optimizer_fea, num_iters, power=self.cfg.SOLVER.LR_POWER)
             scheduler_cls = PolynomialLR(
                 optimizer_cls, num_iters, power=self.cfg.SOLVER.LR_POWER)
-        
+
         schedulers = [scheduler_fea, scheduler_cls]
-        
+
         return optimizers, schedulers
-    
+
     def log_metrics(self, batch_idx):
         self.log('global_step', self.global_step, on_step=True, on_epoch=False)
         base_lr = self.trainer.optimizers[0].param_groups[0]['lr']
@@ -369,7 +369,6 @@ class SourceFreeLearner(BaseLearner):
     def on_train_end(self):
         print("\nSaving last checkpoint...")
         self.trainer.save_checkpoint(os.path.join(self.cfg.OUTPUT_DIR, 'last.ckpt'))
-
 
     def train_dataloader(self):
         train_set = build_dataset(self.cfg, mode='train', is_source=False)
@@ -616,7 +615,7 @@ class Test(BaseLearner):
             wrong_file_name = os.path.join(self.cfg.OUTPUT_DIR, 'viz', 'wrong', name + '.png')
 
         output = self.inference(x, y, flip=True, save_embed_path=embed_file_name,
-                              save_wrong_path=wrong_file_name, cfg=self.cfg)
+                                save_wrong_path=wrong_file_name, cfg=self.cfg)
         pred = output.max(1)[1]
 
         if self.cfg.TEST.SAVE_EMBED:
@@ -665,7 +664,8 @@ class Test(BaseLearner):
         print('\n\n')
         print('{:<20}  {:<20}  {:<20}'.format('Class', 'IoU (%)', 'Accuracy (%)'))
         for i in range(cfg.MODEL.NUM_CLASSES):
-            print('{:<20}  {:<20.2f}  {:<20.2f}'.format(self.class_names[i], iou_class[i] * 100, accuracy_class[i] * 100))
+            print('{:<20}  {:<20.2f}  {:<20.2f}'.format(
+                self.class_names[i], iou_class[i] * 100, accuracy_class[i] * 100))
 
         # print mIoUs in LateX format
         print()

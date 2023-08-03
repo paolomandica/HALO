@@ -13,9 +13,9 @@ def build_transform(cfg, mode, is_source):
             trans_list = [transform.Resize((h, w)), ] + trans_list
         else:
             trans_list = [
-                             transform.RandomScale(scale=cfg.INPUT.INPUT_SCALES_TRAIN),
-                             transform.RandomCrop(size=(h, w), pad_if_needed=True),
-                         ] + trans_list
+                transform.RandomScale(scale=cfg.INPUT.INPUT_SCALES_TRAIN),
+                transform.RandomCrop(size=(h, w), pad_if_needed=True),
+            ] + trans_list
         trans = transform.Compose(trans_list)
     else:
         w, h = cfg.INPUT.INPUT_SIZE_TEST
@@ -47,5 +47,4 @@ def build_dataset(cfg, mode='train', is_source=True, epochwise=False, empty=Fals
         dataset = DatasetCatalog.get(cfg.DATASETS.TEST, cfg.DATASETS.TEST.split('_')[-1],
                                      num_classes=cfg.MODEL.NUM_CLASSES, max_iters=iters, transform=transform, cfg=cfg,
                                      empty=empty)  # mode previously was cfg.DATASETS.TEST.split('_')[-1] or change in 'test' to do infrence on the train dataset
-
     return dataset

@@ -1,11 +1,22 @@
 import os
+from typing import Any, Callable, List, Optional, Tuple, Union
+
 import numpy as np
 import torch
-from torch.utils import data
 from PIL import Image
+from torch.utils import data
+
+pillow_interp_codes = {
+    'nearest': Image.NEAREST,
+    'bilinear': Image.BILINEAR,
+    'bicubic': Image.BICUBIC,
+    'box': Image.BOX,
+    'lanczos': Image.LANCZOS,
+    'hamming': Image.HAMMING
+}
 
 
-class cityscapesDataSet(data.Dataset):
+class ACDC(data.Dataset):
     def __init__(
             self,
             data_root,
@@ -47,16 +58,15 @@ class cityscapesDataSet(data.Dataset):
                     {
                         "img": os.path.join(
                             self.data_root,
-                            "leftImg8bit/%s/%s" % (self.split, name)
+                            "images/%s/%s" % (self.split, name)
                         ),
                         "label": os.path.join(
                             self.data_root,
-                            "gtFine/%s/%s"
+                            "gt/%s/%s"
                             % (
                                 self.split,
-                                name.split("_leftImg8bit")[0]
-                                + "_gtFine_labelIds.png",
-                                # name + "_gtFine_labelIds.png",
+                                name.split("_rgb_anon")[0]
+                                + "_gt_labelIds.png"
                             ),
                         ),
                         "label_mask": os.path.join(
@@ -64,8 +74,8 @@ class cityscapesDataSet(data.Dataset):
                             "gtMask/%s/%s"
                             % (
                                 self.split,
-                                name.split("_leftImg8bit")[0]
-                                + "_gtFine_labelIds.png",
+                                name.split("_rgb_anon")[0]
+                                + "_gt_labelIds.png",
                             ),
                         ),
                         "name": name,
@@ -74,7 +84,7 @@ class cityscapesDataSet(data.Dataset):
                             "gtIndicator/%s/%s"
                             % (
                                 "train",
-                                name.split("_leftImg8bit")[0]
+                                name.split("_rgb_anon")[0]
                                 + "_indicator.pth",
                             ),
                         )
@@ -83,55 +93,6 @@ class cityscapesDataSet(data.Dataset):
 
         if max_iters is not None:
             self.data_list = self.data_list * int(np.ceil(float(max_iters) / len(self.data_list)))
-
-        # --------------------------------------------------------------------------------
-        # A list of all labels
-        # --------------------------------------------------------------------------------
-
-        # Please adapt the train IDs as appropriate for your approach.
-        # Note that you might want to ignore labels with ID 255 during training.
-        # Further note that the current train IDs are only a suggestion. You can use whatever you like.
-        # Make sure to provide your results using the original IDs and not the training IDs.
-        # Note that many IDs are ignored in evaluation and thus you never need to predict these!
-
-        # labels = [
-        #     #       name                     id    trainId   category            catId     hasInstances   ignoreInEval   color
-        #     Label('unlabeled',                0,      255,    'void',             0,          False,          True,       (0, 0, 0)),
-        #     Label('ego vehicle',              1,      255,    'void',             0,          False,          True,       (0, 0, 0)),
-        #     Label('rectification border',     2,      255,    'void',             0,          False,          True,       (0, 0, 0)),
-        #     Label('out of roi',               3,      255,    'void',             0,          False,          True,       (0, 0, 0)),
-        #     Label('static',                   4,      255,    'void',             0,          False,          True,       (0, 0, 0)),
-        #     Label('dynamic',                  5,      255,    'void',             0,          False,          True,       (111, 74, 0)),
-        #     Label('ground',                   6,      255,    'void',             0,          False,          True,       (81, 0, 81)),
-        #     Label('road',                     7,      0,      'flat',             1,          False,          False,      (128, 64, 128)),
-        #     Label('sidewalk',                 8,      1,      'flat',             1,          False,          False,      (244, 35, 232)),
-        #     Label('parking',                  9,      255,    'flat',             1,          False,          True,       (250, 170, 160)),
-        #     Label('rail track',               10,     255,    'flat',             1,          False,          True,       (230, 150, 140)),
-        #     Label('building',                 11,     2,      'construction',     2,          False,          False,      (70, 70, 70)),
-        #     Label('wall',                     12,     3,      'construction',     2,          False,          False,      (102, 102, 156)),
-        #     Label('fence',                    13,     4,      'construction',     2,          False,          False,      (190, 153, 153)),
-        #     Label('guard rail',               14,     255,    'construction',     2,          False,          True,       (180, 165, 180)),
-        #     Label('bridge',                   15,     255,    'construction',     2,          False,          True,       (150, 100, 100)),
-        #     Label('tunnel',                   16,     255,    'construction',     2,          False,          True,       (150, 120, 90)),
-        #     Label('pole',                     17,     5,      'object',           3,          False,          False,      (153, 153, 153)),
-        #     Label('polegroup',                18,     255,    'object',           3,          False,          True,       (153, 153, 153)),
-        #     Label('traffic light',            19,     6,      'object',           3,          False,          False,      (250, 170, 30)),
-        #     Label('traffic sign',             20,     7,      'object',           3,          False,          False,      (220, 220, 0)),
-        #     Label('vegetation',               21,     8,      'nature',           4,          False,          False,      (107, 142, 35)),
-        #     Label('terrain',                  22,     9,      'nature',           4,          False,          False,      (152, 251, 152)),
-        #     Label('sky',                      23,     10,     'sky',              5,          False,          False,      (70, 130, 180)),
-        #     Label('person',                   24,     11,     'human',            6,          True,           False,      (220, 20, 60)),
-        #     Label('rider',                    25,     12,     'human',            6,          True,           False,      (255, 0, 0)),
-        #     Label('car',                      26,     13,     'vehicle',          7,          True,           False,      (0, 0, 142)),
-        #     Label('truck',                    27,     14,     'vehicle',          7,          True,           False,      (0, 0, 70)),
-        #     Label('bus',                      28,     15,     'vehicle',          7,          True,           False,      (0, 60, 100)),
-        #     Label('caravan',                  29,     255,    'vehicle',          7,          True,           True,       (0, 0, 90)),
-        #     Label('trailer',                  30,     255,    'vehicle',          7,          True,           True,       (0, 0, 110)),
-        #     Label('train',                    31,     16,     'vehicle',          7,          True,           False,      (0, 80, 100)),
-        #     Label('motorcycle',               32,     17,     'vehicle',          7,          True,           False,      (0, 0, 230)),
-        #     Label('bicycle',                  33,     18,     'vehicle',          7,          True,           False,      (119, 11, 32)),
-        #     Label('license plate',             -1,    -1,     'vehicle',          7,          False,          True,       (0, 0, 142)),
-        # ]
 
         # GTAV
         self.id_to_trainid = {
@@ -213,10 +174,9 @@ class cityscapesDataSet(data.Dataset):
                 14: "motocycle",
                 15: "bicycle",
             }
+
         self.transform = transform
-
         self.ignore_label = ignore_label
-
         self.debug = debug
 
     def __len__(self):
@@ -230,7 +190,7 @@ class cityscapesDataSet(data.Dataset):
         image = Image.open(datafiles["img"]).convert('RGB')
         label = np.array(Image.open(datafiles["label"]), dtype=np.uint8)
         label_mask = None
-        if self.split == 'train' and "extra" not in self.data_root:
+        if self.split == 'train':
             label_mask = np.array(Image.open(datafiles["label_mask"]), dtype=np.uint8)
         else:
             # test or val, mask is useless
@@ -286,3 +246,121 @@ class cityscapesDataSet(data.Dataset):
         }
 
         return ret_data
+
+
+class ACDC_old(data.Dataset):
+
+    orig_dims = (1080, 1920)
+
+    def __init__(
+            self,
+            root: str,
+            stage: str = "train",
+            condition: Union[List[str], str] = [
+                "fog", "night", "rain", "snow"],
+            load_keys: Union[List[str], str] = [
+                "image_ref", "image", "semantic"],
+            dims: Union[Tuple[int, int], List[int]] = (1080, 1920),
+            transforms: Optional[Callable] = None,
+            predict_on: Optional[str] = None,
+            **kwargs
+    ) -> None:
+        super().__init__()
+        self.root = root
+        self.dims = dims
+        self.transforms = transforms
+
+        assert stage in ["train", "val", "test", "predict"]
+        self.stage = stage
+
+        # mapping from stage to splits
+        if self.stage == 'train':
+            self.split = 'train'
+        elif self.stage == 'val':
+            self.split = 'val'
+        elif self.stage == 'test':
+            self.split = 'val'  # test on val split
+        elif self.stage == 'predict':
+            if not predict_on:
+                self.split = 'test'  # predict on test split
+            else:
+                self.split = predict_on
+
+        if isinstance(condition, str):
+            self.condition = [condition]
+        else:
+            self.condition = condition
+
+        if isinstance(load_keys, str):
+            self.load_keys = [load_keys]
+        else:
+            self.load_keys = load_keys
+
+        self.paths = {k: []
+                      for k in ['image', 'image_ref', 'semantic']}
+
+        self.images_dir = os.path.join(self.root, 'rgb_anon')
+        self.semantic_dir = os.path.join(self.root, 'gt')
+        if not os.path.isdir(self.images_dir) or not os.path.isdir(self.semantic_dir):
+            raise RuntimeError('Dataset not found or incomplete. Please make sure all required folders for the'
+                               ' specified "split" and "condition" are inside the "root" directory')
+
+        for cond in self.condition:
+            img_parent_dir = os.path.join(self.images_dir, cond, self.split)
+            semantic_parent_dir = os.path.join(
+                self.semantic_dir, cond, self.split)
+            for recording in os.listdir(img_parent_dir):
+                img_dir = os.path.join(img_parent_dir, recording)
+                semantic_dir = os.path.join(semantic_parent_dir, recording)
+                for file_name in os.listdir(img_dir):
+                    for k in ['image', 'image_ref', 'semantic']:
+                        if k == 'image':
+                            file_path = os.path.join(img_dir, file_name)
+                        elif k == 'image_ref':
+                            ref_img_dir = img_dir.replace(
+                                self.split, self.split + '_ref')
+                            ref_file_name = file_name.replace(
+                                'rgb_anon', 'rgb_ref_anon')
+                            file_path = os.path.join(
+                                ref_img_dir, ref_file_name)
+                        elif k == 'semantic':
+                            semantic_file_name = file_name.replace(
+                                'rgb_anon.png', 'gt_labelTrainIds.png')
+                            file_path = os.path.join(
+                                semantic_dir, semantic_file_name)
+                        self.paths[k].append(file_path)
+
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        """
+        Args:
+            index (int): Index
+        Returns:
+            tuple: (image, target) where target is a tuple of all target types if target_type is a list with more
+            than one item. Otherwise target is a json object if target_type="polygon", else the image segmentation.
+        """
+
+        sample: Any = {}
+        sample['filename'] = self.paths['image'][index].split('/')[-1]
+
+        for k in self.load_keys:
+            if k in ['image', 'image_ref']:
+                data = Image.open(self.paths[k][index]).convert('RGB')
+                if data.size != self.dims[::-1]:
+                    data = data.resize(
+                        self.dims[::-1], resample=pillow_interp_codes['bilinear'])
+            elif k == 'semantic':
+                data = Image.open(self.paths[k][index])
+                if data.size != self.dims[::-1]:
+                    data = data.resize(
+                        self.dims[::-1], resample=pillow_interp_codes['nearest'])
+            else:
+                raise ValueError('invalid load_key')
+            sample[k] = data
+
+        if self.transforms is not None:
+            sample = self.transforms(sample)
+
+        return sample
+
+    def __len__(self) -> int:
+        return len(next(iter(self.paths.values())))

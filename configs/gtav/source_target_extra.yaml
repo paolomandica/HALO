@@ -1,0 +1,44 @@
+MODEL:
+  NAME: "deeplabv3plus_resnet101"   #  deeplabv2_resnet101 or deeplabv3plus_resnet101
+  WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
+  FREEZE_BN: True
+  HYPER: True
+  REDUCED_CHANNELS: 64
+  WEIGHTED_NORM: True
+DATASETS:
+  SOURCE_TRAIN: "extra_train"
+  TARGET_TRAIN: "cityscapes_train"
+  TEST: "cityscapes_val"
+INPUT:
+  SOURCE_INPUT_SIZE_TRAIN: (1280, 640)
+  TARGET_INPUT_SIZE_TRAIN: (1280, 640)
+  INPUT_SIZE_TEST: (1280, 640)
+SOLVER:
+  GPUS: [0,1,2,3]
+  BASE_LR: 1e-4
+  NUM_ITER: 60000
+  BATCH_SIZE: 2
+  CONSISTENT_LOSS: 0.
+  WARMUP_ITERS: 600
+ACTIVE:
+  NAME: 'HALO'
+  SETTING: 'RA'
+  SELECT_ITER: [0] # , 2500, 5000, 10000, 20000]
+  RATIO: 0.05
+  RADIUS_K: 1
+  UNCERTAINTY: 'entropy'   # 'entropy' or 'none'
+  PURITY: 'hyper'          # 'ripu' or 'hyper' or 'none'
+  VIZ_MASK: False
+  NORMALIZE: True
+  MASK_RADIUS_K: 5
+  K: 100
+WANDB:
+  ENABLE: true
+  PROJECT: 'active_domain_adapt'
+  NAME: 'halo_extra_data_10k'
+  GROUP: 'source_target'
+  ENTITY: 'pinlab-sapienza'
+resume: 'results/source_target/SOTA_hyper_v3plus_64_WN_5_perc_hyperimp_entropy_new/model_global_step=19998.0_mIoU=74.07.ckpt'
+OUTPUT_DIR: 'results/source_target/extra_data_10k'
+DEBUG: 0
+PROTOCOL: 'source_target'   # source | source_target | source_free

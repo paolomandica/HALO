@@ -3,6 +3,7 @@ import os.path as op
 from .cityscapes import cityscapesDataSet
 from .gtav import GTAVDataSet
 from .synthia import synthiaDataSet
+from .acdc import ACDC
 import numpy as np
 import torch
 from torch.utils import data
@@ -31,11 +32,25 @@ class DatasetCatalog(object):
             "data_dir": "cityscapes",
             "data_list": "cityscapes_val_list.txt"
         },
+        "extra_train": {
+            "data_dir": "halo_extra_data_10k",
+            "data_list": "extra_train_list_10k.txt"
+        },
+        "acdc_train": {
+            "data_dir": "acdc",
+            "data_list": "acdc_train_list.txt"
+        },
+        "acdc_val": {
+            "data_dir": "acdc",
+            "data_list": "acdc_val_list.txt"
+        },
     }
 
     @staticmethod
     def get(name, mode, num_classes, max_iters=None, transform=None, cfg=None, empty=False):
+        print()
         if "gtav" in name:
+            print("Initializing GTAV dataset")
             data_dir = DatasetCatalog.DATASET_DIR
             attrs = DatasetCatalog.DATASETS[name]
             args = dict(
@@ -45,6 +60,7 @@ class DatasetCatalog(object):
             return GTAVDataSet(args["root"], args["data_list"], max_iters=max_iters, num_classes=num_classes,
                                split=mode, transform=transform)
         elif "synthia" in name:
+            print("Initializing SYNTHIA dataset")
             data_dir = DatasetCatalog.DATASET_DIR
             attrs = DatasetCatalog.DATASETS[name]
             args = dict(
@@ -54,7 +70,8 @@ class DatasetCatalog(object):
             return synthiaDataSet(args["root"], args["data_list"], max_iters=max_iters, num_classes=num_classes,
                                   split=mode, transform=transform)
 
-        elif "cityscapes" in name:
+        elif "cityscapes" in name or "extra" in name:
+            print("Initializing Cityscapes dataset")
             data_dir = DatasetCatalog.DATASET_DIR
             attrs = DatasetCatalog.DATASETS[name]
             args = dict(
@@ -63,6 +80,17 @@ class DatasetCatalog(object):
             )
             return cityscapesDataSet(args["root"], args["data_list"], max_iters=max_iters, num_classes=num_classes,
                                      split=mode, transform=transform, cfg=cfg, empty=empty)
+
+        elif "acdc" in name:
+            print("Initializing ACDC dataset")
+            data_dir = DatasetCatalog.DATASET_DIR
+            attrs = DatasetCatalog.DATASETS[name]
+            args = dict(
+                root=os.path.join(data_dir, attrs["data_dir"]),
+                data_list=os.path.join(data_dir, attrs["data_list"]),
+            )
+            return ACDC(args["root"], args["data_list"], max_iters=max_iters, num_classes=num_classes,
+                        split=mode, transform=transform, cfg=cfg, empty=empty)
 
         raise RuntimeError("Dataset not available: {}".format(name))
 
@@ -73,7 +101,13 @@ class DatasetCatalog(object):
                 print("Debug without mask initialization!")
             return
         data_dir = DatasetCatalog.DATASET_DIR
-        attrs = DatasetCatalog.DATASETS['cityscapes_train']
+        dataset_name = cfg.DATASETS.TARGET_TRAIN
+        if "cityscapes" in dataset_name:
+            attrs = DatasetCatalog.DATASETS['cityscapes_train']
+        elif "extra" in dataset_name:
+            attrs = DatasetCatalog.DATASETS['extra_train']
+        elif "acdc" in dataset_name:
+            attrs = DatasetCatalog.DATASETS['acdc_train']
         data_list = os.path.join(data_dir, attrs["data_list"])
         root = os.path.join(data_dir, attrs["data_dir"])
         with open(data_list, "r") as handle:
@@ -81,25 +115,48 @@ class DatasetCatalog(object):
 
         def init_mask(fname):
             name = fname.strip()
-            path2image = os.path.join(root, "leftImg8bit/%s/%s" % ('train', name))
-            path2mask = os.path.join(
-                cfg.OUTPUT_DIR,
-                "gtMask/%s/%s"
-                % (
-                    "train",
-                    name.split("_leftImg8bit")[0]
-                    + "_gtFine_labelIds.png",
-                ),
-            )
-            path2indicator = os.path.join(
-                cfg.OUTPUT_DIR,
-                "gtIndicator/%s/%s"
-                % (
-                    "train",
-                    name.split("_leftImg8bit")[0]
-                    + "_indicator.pth",
-                ),
-            )
+
+            if "cityscapes" in dataset_name or "extra" in dataset_name:
+                path2image = os.path.join(root, "leftImg8bit/%s/%s" % ('train', name))
+                path2mask = os.path.join(
+                    cfg.OUTPUT_DIR,
+                    "gtMask/%s/%s"
+                    % (
+                        "train",
+                        name.split("_leftImg8bit")[0]
+                        + "_gtFine_labelIds.png",
+                    ),
+                )
+                path2indicator = os.path.join(
+                    cfg.OUTPUT_DIR,
+                    "gtIndicator/%s/%s"
+                    % (
+                        "train",
+                        name.split("_leftImg8bit")[0]
+                        + "_indicator.pth",
+                    ),
+                )
+
+            elif "acdc" in dataset_name:
+                path2image = os.path.join(root, "images/%s/%s" % ('train', name))
+                path2mask = os.path.join(
+                    cfg.OUTPUT_DIR,
+                    "gtMask/%s/%s"
+                    % (
+                        "train",
+                        name.split("_rgb_anon")[0]
+                        + "_gt_labelIds.png",
+                    ),
+                )
+                path2indicator = os.path.join(
+                    cfg.OUTPUT_DIR,
+                    "gtIndicator/%s/%s"
+                    % (
+                        "train",
+                        name.split("_rgb_anon")[0]
+                        + "_indicator.pth",
+                    ),
+                )
 
             mask_dir = os.path.join("%s/gtMask/train/%s" % (cfg.OUTPUT_DIR, name.split("/")[0]))
             indicator_dir = os.path.join("%s/gtIndicator/train/%s" % (cfg.OUTPUT_DIR, name.split("/")[0]))
