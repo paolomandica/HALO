@@ -102,12 +102,14 @@ class DepthwiseSeparableASPP(nn.Module):
 
         decoder_inplanes = 560
         decoder_out_channels = 512
-        self.decoder = nn.Sequential(
+
+        decoder_layers = [
             DepthwiseSeparableConv2d(decoder_inplanes, decoder_out_channels, kernel_size=3, stride=1, padding=1,
                                      bias=False, norm_layer=norm_layer),
             DepthwiseSeparableConv2d(decoder_out_channels, decoder_out_channels, kernel_size=3, stride=1, padding=1,
-                                     bias=False, norm_layer=norm_layer),
-        )
+                                     bias=False, norm_layer=norm_layer)
+        ]
+        self.decoder = None
 
         # to reduce channels and work in low dimensions
         self.conv_reduce = None
@@ -125,10 +127,18 @@ class DepthwiseSeparableASPP(nn.Module):
                 nn.Linear(decoder_out_channels, decoder_out_channels)
             )
 
-        self.cls_conv = nn.Sequential(
-            nn.Dropout(0.1),
-            nn.Conv2d(decoder_out_channels, num_classes, kernel_size=1, stride=1, padding=0)
-        )
+        if self.wn_mlp == None and self.conv_reduce == None:
+            decoder_layers += [
+                nn.Dropout(0.1),
+                nn.Conv2d(decoder_out_channels, num_classes, kernel_size=1, stride=1, padding=0)
+            ]
+            self.decoder = nn.Sequential(*decoder_layers)
+        else:
+            self.decoder = nn.Sequential(*decoder_layers)
+            self.cls_conv = nn.Sequential(
+                nn.Dropout(0.1),
+                nn.Conv2d(decoder_out_channels, num_classes, kernel_size=1, stride=1, padding=0)
+            )
 
         self._init_weight()
 
@@ -154,26 +164,32 @@ class DepthwiseSeparableASPP(nn.Module):
 
         # feed to decoder
         feats = torch.cat([aspp_out, shortcut_out], dim=1)
-        decoder_out = self.decoder(feats)
 
-        # reduce channels
-        if self.conv_reduce is not None:
-            decoder_out = self.conv_reduce(decoder_out)
+        if self.wn_mlp == None and self.conv_reduce == None:
+            out = self.decoder(feats)
+            decoder_out = None
 
-        # weighted normalization
-        if self.wn_mlp is not None:
-            temp_out = decoder_out.permute(0, 2, 3, 1).contiguous().view(-1, decoder_out.size(1))
-            norm_weights = self.wn_mlp(temp_out)
-            norm_weights = norm_weights.view(-1, decoder_out.size(2)*decoder_out.size(3), decoder_out.size(1))
-            norm_weights = torch.mean(norm_weights, dim=1, keepdim=False)
-            norm_weights = norm_weights.view(-1, decoder_out.size(1), 1, 1)
-            norm_weights = torch.clamp(norm_weights, min=1e-5)
-            temp_out = decoder_out.reshape(-1, decoder_out.size(1), decoder_out.size(2)*decoder_out.size(3))
-            temp_out = F.normalize(temp_out, dim=-1)
-            temp_out = temp_out.reshape(-1, decoder_out.size(1), decoder_out.size(2), decoder_out.size(3))
-            decoder_out = temp_out * norm_weights
+        else:
+            decoder_out = self.decoder(feats)
 
-        out = self.cls_conv(decoder_out)
+            # reduce channels
+            if self.conv_reduce is not None:
+                decoder_out = self.conv_reduce(decoder_out)
+
+            # weighted normalization
+            if self.wn_mlp is not None:
+                temp_out = decoder_out.permute(0, 2, 3, 1).contiguous().view(-1, decoder_out.size(1))
+                norm_weights = self.wn_mlp(temp_out)
+                norm_weights = norm_weights.view(-1, decoder_out.size(2)*decoder_out.size(3), decoder_out.size(1))
+                norm_weights = torch.mean(norm_weights, dim=1, keepdim=False)
+                norm_weights = norm_weights.view(-1, decoder_out.size(1), 1, 1)
+                norm_weights = torch.clamp(norm_weights, min=1e-5)
+                temp_out = decoder_out.reshape(-1, decoder_out.size(1), decoder_out.size(2)*decoder_out.size(3))
+                temp_out = F.normalize(temp_out, dim=-1)
+                temp_out = temp_out.reshape(-1, decoder_out.size(1), decoder_out.size(2), decoder_out.size(3))
+                decoder_out = temp_out * norm_weights
+
+            out = self.cls_conv(decoder_out)
 
         if size is not None:
             out = F.interpolate(out, size=size, mode='bilinear', align_corners=True)
