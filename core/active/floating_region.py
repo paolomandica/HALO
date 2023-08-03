@@ -44,8 +44,9 @@ class FloatingRegionScore(nn.Module):
         init_conv_layer(self.entropy_conv, size)
 
         # init purity_conv
-        if purity_type == 'hyper':
+        if purity_type == 'hyper' or purity_type == 'ripu_quantized':
             self.K, size, in_channels = K, 3, K
+
         self.purity_conv = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=size,
                                      stride=1, padding=int(size / 2), bias=False,
                                      padding_mode=padding_mode, groups=in_channels)
@@ -82,6 +83,15 @@ class FloatingRegionScore(nn.Module):
             (norm_max - norm_min)
         predict = (decoder_out_norm * self.K) - 0.5  # [h, w]
         # predict = (decoder_out.squeeze(0).norm(dim=0) * self.K) - 0.5  # [h, w]
+        predict = torch.clamp(predict, min=-0.5+EPS, max=self.K-0.5-EPS)
+        predict = torch.round(predict).long()
+        return predict
+
+    def quantize_prob_map(self, predict):
+        EPS = 1e-5
+        predict = torch.max(predict, dim=0)
+        predict = predict[0]
+        predict = predict * self.K - 0.5
         predict = torch.clamp(predict, min=-0.5+EPS, max=self.K-0.5-EPS)
         predict = torch.round(predict).long()
         return predict
@@ -124,11 +134,15 @@ class FloatingRegionScore(nn.Module):
         region_uncertainty = self.compute_region_uncertainty(unc_type, logit, p)
 
         assert pur_type in [
-            'ripu', 'hyper', 'none'], "error: pur_type '{}' not implemented".format(pur_type)
+            'ripu', 'hyper', 'none', 'ripu_quantized'], "error: pur_type '{}' not implemented".format(pur_type)
         if pur_type == 'ripu':
             predict = torch.argmax(p, dim=0)   # [h, w]
             region_impurity, count = self.compute_region_impurity(
                 predict, self.in_channels, normalize)
+        elif pur_type == 'ripu_quantized':
+            predict = self.quantize_prob_map(p)
+            region_impurity, count = self.compute_region_impurity(
+                predict, self.K, normalize)
         elif pur_type == 'hyper':
             predict = self.quantize_uncert_map(decoder_out)
             region_impurity, count = self.compute_region_impurity(
