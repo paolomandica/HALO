@@ -26,17 +26,18 @@ ACTIVE:
   RATIO: 0.05
   RADIUS_K: 1
   UNCERTAINTY: 'entropy'
-  PURITY: 'ripu'
+  PURITY: 'ripu_quantized'
   VIZ_MASK: False
   NORMALIZE: False
   MASK_RADIUS_K: 3
+  K: 100
 WANDB:
   ENABLE: True
   PROJECT: 'active_domain_adapt'
-  NAME: 'ripu_dlv3_5_perc_ch_64_2'
+  NAME: 'ripu_quantized'
   GROUP: 'source_target'
   ENTITY: 'pinlab-sapienza'
-resume: 'results/pretrain_gtav/CHECKPOINT_PATH.ckpt'
-OUTPUT_DIR: 'results/source_target/OUTPUT_PATH'
+resume: 'results/pretrain_gtav/v3plus_ch_64_2/model_global_step=5998.0_mIoU=37.95.ckpt'
+OUTPUT_DIR: 'results/source_target/ripu_quantized'
 DEBUG: 0
 PROTOCOL: 'source_target'   # source | source_target | source_free

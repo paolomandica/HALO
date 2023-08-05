@@ -132,13 +132,12 @@ class DepthwiseSeparableASPP(nn.Module):
                 nn.Dropout(0.1),
                 nn.Conv2d(decoder_out_channels, num_classes, kernel_size=1, stride=1, padding=0)
             ]
-            self.decoder = nn.Sequential(*decoder_layers)
         else:
-            self.decoder = nn.Sequential(*decoder_layers)
             self.cls_conv = nn.Sequential(
                 nn.Dropout(0.1),
                 nn.Conv2d(decoder_out_channels, num_classes, kernel_size=1, stride=1, padding=0)
             )
+        self.decoder = nn.Sequential(*decoder_layers)
 
         self._init_weight()
 

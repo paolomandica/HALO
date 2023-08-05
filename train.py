@@ -1,5 +1,6 @@
 from pathlib import Path
 import random
+import time
 import setproctitle
 import warnings
 import torch
@@ -14,10 +15,6 @@ import pytorch_lightning as pl
 
 warnings.filterwarnings('ignore')
 
-seed = cfg.SEED
-if seed == -1:
-    seed = random.randint(0, 100000)
-pl.seed_everything(seed)
 torch.backends.cudnn.benchmark = True
 # torch.use_deterministic_algorithms(True)
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -65,6 +62,12 @@ def main():
     args = parse_args()
     print(args, end='\n\n')
 
+    seed = cfg.SEED
+    if seed == -1:
+        seed = random.randint(0, 100000)
+    print("Using seed: {}".format(seed))
+    pl.seed_everything(cfg.SEED, workers=True)
+
     output_dir = cfg.OUTPUT_DIR
     if output_dir:
         mkdir(output_dir)
@@ -77,8 +80,6 @@ def main():
         wandb_logger = WandbLogger(project=cfg.WANDB.PROJECT, name=cfg.WANDB.NAME,
                                    entity=cfg.WANDB.ENTITY, group=cfg.WANDB.GROUP,
                                    config=cfg, save_dir='.')
-
-    pl.seed_everything(cfg.SEED, workers=True)
 
     # init learner
     if cfg.PROTOCOL in protocol_types:

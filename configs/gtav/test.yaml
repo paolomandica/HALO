@@ -20,6 +20,6 @@ TEST:
   VIZ_WRONG: False
   SAVE_EMBED: False
   BATCH_SIZE: 1
-resume: 'results/source_target/CHECKPOINT_PATH.ckpt'
-OUTPUT_DIR: 'results/source_target/OUTPUT_PATH'
+resume: results/source_target/hyper_dlv3_64_WN_5_perc_certuncert_hyperimp_K100_RK5/model_global_step=28998.0_mIoU=74.10.ckpt
+OUTPUT_DIR: 'results/source_target/hyper_dlv3_64_WN_5_perc_certuncert_hyperimp_K100_RK5/'
 DEBUG: 0

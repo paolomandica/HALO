@@ -101,9 +101,9 @@
                 "SOLVER.GPUS",
                 "[0]",
                 "ACTIVE.PURITY",
-                "ripu_quantized",
+                "hyper",
                 "DEBUG",
-                "0"
+                "1"
             ]
         }
     ]

@@ -96,6 +96,6 @@ _C.TEST.SAVE_EMBED = False
 # ---------------------------------------------------------------------------- #
 _C.OUTPUT_DIR = ""
 _C.resume = ""
-_C.SEED = -1
+_C.SEED = 123
 _C.DEBUG = 0
 _C.PROTOCOL = "source_target"
