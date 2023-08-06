@@ -113,7 +113,7 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                 output = F.interpolate(
                     output, size=size, mode='bilinear', align_corners=True)
 
-                if uncertainty_type in ['certainty', 'hyperbolic'] or (purity_type == 'hyper') or (uncertainty_type == 'none' and cfg.MODEL.HYPER):
+                if uncertainty_type in ['certainty', 'hyperbolic'] or (purity_type in ['hyper', 'radius']) or (uncertainty_type == 'none' and cfg.MODEL.HYPER):
                     decoder_out = decoder_out[i:i + 1, :, :, :]
                     decoder_out = F.interpolate(
                         decoder_out, size=size, mode='bilinear', align_corners=True)

@@ -27,7 +27,7 @@ ACTIVE:
   RATIO: 0.05
   RADIUS_K: 1
   UNCERTAINTY: 'entropy'   # 'entropy' or 'none'
-  PURITY: 'hyper'          # 'ripu' or 'hyper' or 'none'
+  PURITY: 'radius'          # 'ripu' or 'hyper' or 'none'
   VIZ_MASK: False
   NORMALIZE: True
   MASK_RADIUS_K: 5
@@ -35,10 +35,10 @@ ACTIVE:
 WANDB:
   ENABLE: True
   PROJECT: 'active_domain_adapt'
-  NAME: 'halo_v3plus_64_test'
+  NAME: 'halo_rebuttal_radius_entropy'
   GROUP: 'source_target'
   ENTITY: 'pinlab-sapienza'
-resume: 'results/pretrain_gtav/CHECKPOINT_PATH.ckpt'
-OUTPUT_DIR: 'results/source_target/OUTPUT_PATH'
+resume: 'results/pretrain_gtav/hyper_v3plus_ch_64_WN/model_global_step=25998.0_mIoU=38.99.ckpt'
+OUTPUT_DIR: 'results/source_target/halo_rebuttal_radius_entropy'
 DEBUG: 0
 PROTOCOL: 'source_target'   # source | source_target | source_free

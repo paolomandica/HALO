@@ -126,6 +126,9 @@ artifacts
 datasets/gtav
 datasets/cityscapes
 datasets/synthia
+datasets/acdc
+datasets/halo_extra_data
+datasets/halo_extra_data_10k
 results
 checkpoints
 scripts/train_scripts_luca.sh
