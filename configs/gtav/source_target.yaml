@@ -14,7 +14,7 @@ INPUT:
   TARGET_INPUT_SIZE_TRAIN: (1280, 640)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
-  GPUS: [0,1,2,3]
+  GPUS: [4,5,6,7]
   BASE_LR: 1e-3
   NUM_ITER: 60000
   BATCH_SIZE: 2
@@ -26,19 +26,19 @@ ACTIVE:
   SELECT_ITER: [0, 15000, 30000, 40000, 50000]
   RATIO: 0.05
   RADIUS_K: 1
-  UNCERTAINTY: 'entropy'   # 'entropy' or 'none'
-  PURITY: 'radius'          # 'ripu' or 'hyper' or 'none'
+  UNCERTAINTY: 'oracle_acc'   # 'entropy' or 'none'
+  PURITY: 'none'          # 'ripu' or 'hyper' or 'none'
   VIZ_MASK: False
-  NORMALIZE: True
+  NORMALIZE: False
   MASK_RADIUS_K: 5
   K: 100
 WANDB:
   ENABLE: True
   PROJECT: 'active_domain_adapt'
-  NAME: 'halo_rebuttal_radius_entropy'
+  NAME: 'halo_rebuttal_oracle_acc_score_new'
   GROUP: 'source_target'
   ENTITY: 'pinlab-sapienza'
 resume: 'results/pretrain_gtav/hyper_v3plus_ch_64_WN/model_global_step=25998.0_mIoU=38.99.ckpt'
-OUTPUT_DIR: 'results/source_target/halo_rebuttal_radius_entropy'
+OUTPUT_DIR: 'results/source_target/halo_rebuttal_oracle_acc_score_new'
 DEBUG: 0
 PROTOCOL: 'source_target'   # source | source_target | source_free

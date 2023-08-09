@@ -18,8 +18,8 @@ SOLVER:
 TEST:
   VIZ_SCORE: False
   VIZ_WRONG: False
-  SAVE_EMBED: False
+  SAVE_EMBED: True
   BATCH_SIZE: 1
-resume: 'results/source_target/CHECKPOINT_PATH.ckpt'
-OUTPUT_DIR: 'results/source_target/OUTPUT_PATH'
+resume: 'results/source_target/halo_dlv3plus_acdc/halo_dlv3plus_acdc.ckpt'
+OUTPUT_DIR: 'results/source_target/halo_dlv3plus_acdc'
 DEBUG: 0

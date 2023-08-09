@@ -4,7 +4,7 @@ import copy
 
 import numpy as np
 import torch.nn.functional as F
-from kmeans_pytorch import kmeans
+# from kmeans_pytorch import kmeans
 
 from PIL import Image
 from tqdm import tqdm
@@ -120,7 +120,7 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
 
                 score, _, _ = floating_region_score(
                     output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE,
-                    unc_type=uncertainty_type, pur_type=purity_type)
+                    unc_type=uncertainty_type, pur_type=purity_type, ground_truth=ground_truth)
                 score_clone = score.clone()
                 score[active] = -float('inf')
 

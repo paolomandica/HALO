@@ -101,7 +101,7 @@
                 "WANDB.ENABLE",
                 "False",
                 "SOLVER.GPUS",
-                "[0]"
+                "[4,5,6,7]"
             ]
         }
     ]

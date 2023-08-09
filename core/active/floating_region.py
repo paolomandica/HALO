@@ -53,10 +53,15 @@ class FloatingRegionScore(nn.Module):
 
         self.mapper = HyperMapper(c=cfg.MODEL.CURVATURE)
 
-    def compute_region_uncertainty(self, unc_type, logit, p, normalize=False):
+    def compute_region_uncertainty(self, unc_type, logit, p, normalize=False, ground_truth=None):
         if unc_type == 'entropy':
             region_uncertainty = torch.sum(-p * torch.log(p + 1e-6), dim=0).unsqueeze(
                 dim=0).unsqueeze(dim=0) / math.log(19)  # [1, 1, h, w]
+        elif unc_type == 'oracle_acc':
+            gt_clone = ground_truth.clone() #.detach().cpu()
+            gt_clone[ground_truth == 255] = p.argmax(dim=0)[ground_truth == 255]
+            # Select the 1 - p for the correct class in gtclone
+            region_uncertainty = 1 - torch.gather(p, dim=0, index=gt_clone.unsqueeze(dim=0)).unsqueeze(dim=0)
         else:
             region_uncertainty = torch.zeros(
                 (1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32).cuda()
@@ -99,7 +104,7 @@ class FloatingRegionScore(nn.Module):
         return region_impurity, count
 
     def forward(self, logit: torch.Tensor, decoder_out: torch.Tensor = None, unc_type: str = None,
-                pur_type: str = None, normalize: bool = False):
+                pur_type: str = None, normalize: bool = False, ground_truth = None):
         """
         Compute regions score, impurity and uncertainty.
 
@@ -116,12 +121,12 @@ class FloatingRegionScore(nn.Module):
         logit = logit.squeeze(dim=0)  # [19, h ,w]
         p = torch.softmax(logit, dim=0)  # [19, h, w]
 
-        assert unc_type in ['entropy', 'none'], "error: unc_type '{}' not implemented".format(unc_type)
+        assert unc_type in ['entropy', 'none', 'oracle_acc'], "error: unc_type '{}' not implemented".format(unc_type)
         if self.entropy_conv.weight.device != logit.device:
             self.entropy_conv = self.entropy_conv.to(logit.device)
             self.purity_conv = self.purity_conv.to(logit.device)
 
-        region_uncertainty = self.compute_region_uncertainty(unc_type, logit, p)
+        region_uncertainty = self.compute_region_uncertainty(unc_type, logit, p, ground_truth=ground_truth)
 
         assert pur_type in [
             'ripu', 'hyper', 'none', 'radius'], "error: pur_type '{}' not implemented".format(pur_type)
