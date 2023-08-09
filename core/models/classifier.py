@@ -34,7 +34,7 @@ class ASPP_Classifier_V2(nn.Module):
             out += self.conv2d_list[i + 1](x)
         if size is not None:
             out = F.interpolate(out, size=size, mode='bilinear', align_corners=True)
-        return out
+        return out, None
 
 
 class DepthwiseSeparableConv2d(nn.Module):
