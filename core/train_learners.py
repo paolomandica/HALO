@@ -289,7 +289,7 @@ class SourceFreeLearner(BaseLearner):
             drop_last=False,)
 
         # init mask for cityscape
-        if 'LOCAL_RANK' not in os.environ.keys() and 'NODE_RANK' not in os.environ.keys() and not self.debug:
+        if 'LOCAL_RANK' not in os.environ.keys() and 'NODE_RANK' not in os.environ.keys():
             print(">>>>>>>>>>>>>>>> Init Mask >>>>>>>>>>>>>>>>")
             DatasetCatalog.initMask(self.cfg)
 

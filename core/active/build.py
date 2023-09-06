@@ -4,7 +4,7 @@ import copy
 
 import numpy as np
 import torch.nn.functional as F
-from kmeans_pytorch import kmeans
+# from kmeans_pytorch import kmeans
 
 from PIL import Image
 from tqdm import tqdm
@@ -113,14 +113,14 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                 output = F.interpolate(
                     output, size=size, mode='bilinear', align_corners=True)
 
-                if uncertainty_type in ['certainty', 'hyperbolic'] or (purity_type == 'hyper') or (uncertainty_type == 'none' and cfg.MODEL.HYPER):
+                if uncertainty_type in ['certainty', 'hyperbolic'] or (purity_type in ['hyper', 'radius']) or (uncertainty_type == 'none' and cfg.MODEL.HYPER):
                     decoder_out = decoder_out[i:i + 1, :, :, :]
                     decoder_out = F.interpolate(
                         decoder_out, size=size, mode='bilinear', align_corners=True)
 
                 score, _, _ = floating_region_score(
                     output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE,
-                    unc_type=uncertainty_type, pur_type=purity_type)
+                    unc_type=uncertainty_type, pur_type=purity_type, ground_truth=ground_truth)
                 score_clone = score.clone()
                 score[active] = -float('inf')
 
