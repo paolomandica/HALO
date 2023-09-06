@@ -203,10 +203,10 @@ def visualize_wrong(image, output, decoder_out, gt_segm_map, name, cfg, cmap1='g
     plt.colorbar(im_score, cax=cax, location='right')
 
     # make directory if it doesn't exist
-    # if not os.path.exists(cfg.OUTPUT_DIR + '/viz'):
-    #     os.makedirs(cfg.OUTPUT_DIR + '/viz')
+    # if not os.path.exists(cfg.SAVE_DIR + '/viz'):
+    #     os.makedirs(cfg.SAVE_DIR + '/viz')
     # name = name.rsplit('/', 1)[-1].rsplit('_', 1)[0]
-    # file_name = cfg.OUTPUT_DIR + '/viz/' + name + '_wrong.png'
+    # file_name = cfg.SAVE_DIR + '/viz/' + name + '_wrong.png'
 
     # plt.suptitle(name)
     plt.savefig(name)

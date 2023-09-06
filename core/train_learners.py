@@ -62,10 +62,10 @@ class BaseLearner(pl.LightningModule):
         output, embed = self.classifier(self.feature_extractor(image))
 
         if save_wrong_path:
-            dir_path = os.path.join(self.cfg.OUTPUT_DIR, 'viz')
+            dir_path = os.path.join(self.cfg.SAVE_DIR, 'viz')
             if not os.path.exists(dir_path):
                 os.makedirs(dir_path)
-            dir_path = os.path.join(self.cfg.OUTPUT_DIR, 'viz', 'wrong')
+            dir_path = os.path.join(self.cfg.SAVE_DIR, 'viz', 'wrong')
             if not os.path.exists(dir_path):
                 os.makedirs(dir_path)
             # 640, 1280 --> 1024, 2048  || 160, 320
@@ -73,7 +73,7 @@ class BaseLearner(pl.LightningModule):
             visualize_wrong(image[0], output[:1], embed[:1], label, save_wrong_path, cfg)
 
         if save_embed_path:
-            dir_path = os.path.join(self.cfg.OUTPUT_DIR, 'embed')
+            dir_path = os.path.join(self.cfg.SAVE_DIR, 'embed')
             if not os.path.exists(dir_path):
                 os.makedirs(dir_path)
             # embed = F.interpolate(embed, size=size, mode='bilinear', align_corners=True)
@@ -309,7 +309,7 @@ class SourceFreeLearner(BaseLearner):
             # save checkpoint
             checkpoint_name = "model_before_round_{}.ckpt".format(self.active_round)
             print("\nSaving checkpoint: {}".format(checkpoint_name))
-            self.trainer.save_checkpoint(os.path.join(self.cfg.OUTPUT_DIR, checkpoint_name))
+            self.trainer.save_checkpoint(os.path.join(self.cfg.SAVE_DIR, checkpoint_name))
 
             # start active round
             print(f"\n>>>>>>>>>>>>>>>> Active Round {self.active_round} >>>>>>>>>>>>>>>>")
@@ -368,7 +368,7 @@ class SourceFreeLearner(BaseLearner):
 
     def on_train_end(self):
         print("\nSaving last checkpoint...")
-        self.trainer.save_checkpoint(os.path.join(self.cfg.OUTPUT_DIR, 'last.ckpt'))
+        self.trainer.save_checkpoint(os.path.join(self.cfg.SAVE_DIR, 'last.ckpt'))
 
 
     def train_dataloader(self):
@@ -609,11 +609,11 @@ class Test(BaseLearner):
         embed_file_name = None
         if self.cfg.TEST.SAVE_EMBED:
             self.save_embeddings(y, name, 'label')
-            embed_file_name = os.path.join(self.cfg.OUTPUT_DIR, 'embed', name + '.pt')
+            embed_file_name = os.path.join(self.cfg.SAVE_DIR, 'embed', name + '.pt')
 
         wrong_file_name = None
         if self.cfg.TEST.VIZ_WRONG and (batch_idx in VIZ_LIST):
-            wrong_file_name = os.path.join(self.cfg.OUTPUT_DIR, 'viz', 'wrong', name + '.png')
+            wrong_file_name = os.path.join(self.cfg.SAVE_DIR, 'viz', 'wrong', name + '.png')
 
         output = self.inference(x, y, flip=True, save_embed_path=embed_file_name,
                               save_wrong_path=wrong_file_name, cfg=self.cfg)
@@ -709,7 +709,7 @@ class Test(BaseLearner):
         return test_loader
 
     def save_embeddings(self, output, name, type='embed'):
-        dir_path = os.path.join(self.cfg.OUTPUT_DIR, type)
+        dir_path = os.path.join(self.cfg.SAVE_DIR, type)
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
         file_name = os.path.join(dir_path, name + '.pt')

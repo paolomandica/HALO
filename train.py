@@ -14,10 +14,6 @@ import pytorch_lightning as pl
 
 warnings.filterwarnings('ignore')
 
-seed = cfg.SEED
-if seed == -1:
-    seed = random.randint(0, 100000)
-pl.seed_everything(seed)
 torch.backends.cudnn.benchmark = True
 # torch.use_deterministic_algorithms(True)
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -65,7 +61,7 @@ def main():
     args = parse_args()
     print(args, end='\n\n')
 
-    output_dir = cfg.OUTPUT_DIR
+    output_dir = cfg.SAVE_DIR
     if output_dir:
         mkdir(output_dir)
 
@@ -74,11 +70,14 @@ def main():
     # init wandb logger
     wandb_logger = None
     if cfg.WANDB.ENABLE and not cfg.DEBUG:
-        wandb_logger = WandbLogger(project=cfg.WANDB.PROJECT, name=cfg.WANDB.NAME,
+        wandb_logger = WandbLogger(project=cfg.WANDB.PROJECT, name=cfg.NAME,
                                    entity=cfg.WANDB.ENTITY, group=cfg.WANDB.GROUP,
                                    config=cfg, save_dir='.')
 
-    pl.seed_everything(cfg.SEED, workers=True)
+    seed = cfg.SEED
+    if seed == -1:
+        seed = random.randint(0, 100000)
+    pl.seed_everything(seed, workers=True)
 
     # init learner
     if cfg.PROTOCOL in protocol_types:
@@ -91,7 +90,7 @@ def main():
         save_top_k=1,
         monitor="mIoU",
         mode="max",
-        dirpath=cfg.OUTPUT_DIR,
+        dirpath=cfg.SAVE_DIR,
         filename="model_{global_step}_{mIoU:.2f}",
     )
 
@@ -123,7 +122,7 @@ if __name__ == '__main__':
     main()
 
     # remove gtIndicator subdirectory
-    path = os.path.join(cfg.OUTPUT_DIR, 'gtIndicator')
+    path = os.path.join(cfg.SAVE_DIR, 'gtIndicator')
     if os.path.exists(path):
         try:
             print("Removing gtIndicator directory...")
@@ -132,7 +131,7 @@ if __name__ == '__main__':
             print("Failed to remove gtIndicator directory.")
 
     # remove gtMask subdirectory
-    path = os.path.join(cfg.OUTPUT_DIR, 'gtMask')
+    path = os.path.join(cfg.SAVE_DIR, 'gtMask')
     try:
         print("Removing gtMask directory...")
         shutil.rmtree(path)

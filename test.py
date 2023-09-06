@@ -12,7 +12,7 @@ warnings.filterwarnings('ignore')
 def main():
     args = parse_args()
 
-    output_dir = os.path.join(cfg.OUTPUT_DIR, 'test')
+    output_dir = os.path.join(cfg.SAVE_DIR, 'test')
     if output_dir:
         mkdir(output_dir)
 

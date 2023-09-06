@@ -60,7 +60,7 @@ class cityscapesDataSet(data.Dataset):
                             ),
                         ),
                         "label_mask": os.path.join(
-                            self.cfg.OUTPUT_DIR,
+                            self.cfg.SAVE_DIR,
                             "gtMask/%s/%s"
                             % (
                                 self.split,
@@ -70,7 +70,7 @@ class cityscapesDataSet(data.Dataset):
                         ),
                         "name": name,
                         'indicator': os.path.join(
-                            cfg.OUTPUT_DIR,
+                            cfg.SAVE_DIR,
                             "gtIndicator/%s/%s"
                             % (
                                 "train",

@@ -79,7 +79,7 @@ class DatasetCatalog(object):
             name = fname.strip()
             path2image = os.path.join(root, "leftImg8bit/%s/%s" % ('train', name))
             path2mask = os.path.join(
-                cfg.OUTPUT_DIR,
+                cfg.SAVE_DIR,
                 "gtMask/%s/%s"
                 % (
                     "train",
@@ -88,7 +88,7 @@ class DatasetCatalog(object):
                 ),
             )
             path2indicator = os.path.join(
-                cfg.OUTPUT_DIR,
+                cfg.SAVE_DIR,
                 "gtIndicator/%s/%s"
                 % (
                     "train",
@@ -97,8 +97,8 @@ class DatasetCatalog(object):
                 ),
             )
 
-            mask_dir = os.path.join("%s/gtMask/train/%s" % (cfg.OUTPUT_DIR, name.split("/")[0]))
-            indicator_dir = os.path.join("%s/gtIndicator/train/%s" % (cfg.OUTPUT_DIR, name.split("/")[0]))
+            mask_dir = os.path.join("%s/gtMask/train/%s" % (cfg.SAVE_DIR, name.split("/")[0]))
+            indicator_dir = os.path.join("%s/gtIndicator/train/%s" % (cfg.SAVE_DIR, name.split("/")[0]))
 
             # mkdir
             mkdir_path(mask_dir)

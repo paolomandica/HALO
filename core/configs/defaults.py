@@ -16,7 +16,6 @@ _C.MODEL.WEIGHTED_NORM = True
 
 _C.WANDB = CN()
 _C.WANDB.ENABLE = False
-_C.WANDB.NAME = 'test_run'
 _C.WANDB.GROUP = 'deeplabv2_r101_pretrain'
 _C.WANDB.PROJECT = 'active_domain_adapt'
 _C.WANDB.ENTITY = 'pinlab-sapienza'
@@ -94,6 +93,7 @@ _C.TEST.SAVE_EMBED = False
 # ---------------------------------------------------------------------------- #
 # Misc options
 # ---------------------------------------------------------------------------- #
+_C.NAME = "debug"
 _C.OUTPUT_DIR = ""
 _C.resume = ""
 _C.SEED = -1
