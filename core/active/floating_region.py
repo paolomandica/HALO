@@ -138,8 +138,6 @@ class FloatingRegionScore(nn.Module):
 
         region_uncertainty = self.compute_region_uncertainty(unc_type, logit, p, ground_truth=ground_truth)
 
-        assert pur_type in [
-            'ripu', 'hyper', 'none', 'ripu_quantized', 'radius'], "error: pur_type '{}' not implemented".format(pur_type)
         if pur_type == 'ripu':
             predict = torch.argmax(p, dim=0)   # [h, w]
             region_impurity, count = self.compute_region_impurity(
@@ -152,6 +150,10 @@ class FloatingRegionScore(nn.Module):
             predict = self.quantize_uncert_map(decoder_out)
             region_impurity, count = self.compute_region_impurity(
                 predict, self.K, normalize)
+            radius = self.mapper.poincare_distance_origin(decoder_out, dim=1).unsqueeze(0)
+            region_impurity = normalize_map(region_impurity)
+            radius = normalize_map(radius)
+            region_impurity = region_impurity * radius
         elif pur_type == 'none':
             region_impurity = torch.zeros(
                 (1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32).cuda()
@@ -161,6 +163,8 @@ class FloatingRegionScore(nn.Module):
             region_impurity = self.mapper.poincare_distance_origin(decoder_out, dim=1).unsqueeze(0)
             count = torch.ones(
                 (1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32).cuda()
+        else:
+            raise NotImplementedError("Error: purity type '{}' not implemented".format(pur_type))
 
         prediction_uncertainty = region_uncertainty / count  # [1, 1, h, w]
 

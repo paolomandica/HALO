@@ -35,11 +35,11 @@ ACTIVE:
 WANDB:
   ENABLE: False
   PROJECT: 'active_domain_adapt'
-  NAME: 'halo_radius'
+  NAME: 'halo_radius_boundaries_entropy'
   GROUP: 'source_target'
   ENTITY: 'pinlab-sapienza'
 resume: 'results/pretrain_gtav/hyper_v3plus_ch_64_WN/model_global_step=25998.0_mIoU=38.99.ckpt'
-OUTPUT_DIR: 'results/source_target/halo_radius'
-DEBUG: 0
+OUTPUT_DIR: 'results/source_target/halo_radius_boundaries_entropy'
+DEBUG: 1
 PROTOCOL: 'source_target'   # source | source_target | source_free
-SEED: -1
+SEED: 123
