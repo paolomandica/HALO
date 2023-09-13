@@ -2,9 +2,9 @@ MODEL:
   NAME: "deeplabv3plus_resnet101"   #  deeplabv2_resnet101 or deeplabv3plus_resnet101
   WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
   FREEZE_BN: True
-  HYPER: True
-  REDUCED_CHANNELS: 64
-  WEIGHTED_NORM: True
+  HYPER: False
+  REDUCED_CHANNELS: 512
+  WEIGHTED_NORM: False
 DATASETS:
   SOURCE_TRAIN: "gtav_train"
   TARGET_TRAIN: "cityscapes_train"
@@ -27,7 +27,7 @@ ACTIVE:
   RATIO: 0.05
   RADIUS_K: 1
   UNCERTAINTY: 'pixel_entropy'   # 'entropy' or 'none'
-  PURITY: 'radius'          # 'ripu' or 'hyper' or 'none'
+  PURITY: 'euc_norm'          # 'ripu' or 'hyper' or 'none'
   VIZ_MASK: False
   NORMALIZE: True
   MASK_RADIUS_K: 5
@@ -37,8 +37,8 @@ WANDB:
   PROJECT: 'active_domain_adapt'
   GROUP: 'source_target'
   ENTITY: 'pinlab-sapienza'
-NAME: 'halo_radius_pixel_entropy_5perc'
+NAME: 'halo_euc_norm_pixel_entropy_5perc'
 OUTPUT_DIR: 'results/source_target/'
-resume: 'results/pretrain_gtav/hyper_v3plus_ch_64_WN/model_global_step=25998.0_mIoU=38.99.ckpt'
+resume: 'results/pretrain_gtav/v3plus_512/model_iter020000.pth'
 DEBUG: 0
 PROTOCOL: 'source_target'   # source | source_target | source_free

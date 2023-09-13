@@ -157,6 +157,7 @@ class FloatingRegionScore(nn.Module):
             "oracle_acc",
             "pixel_entropy",
         ], "error: unc_type '{}' not implemented".format(unc_type)
+
         if self.entropy_conv.weight.device != logit.device:
             self.entropy_conv = self.entropy_conv.to(logit.device)
             self.purity_conv = self.purity_conv.to(logit.device)
@@ -187,6 +188,11 @@ class FloatingRegionScore(nn.Module):
             region_impurity = self.mapper.poincare_distance_origin(
                 decoder_out, dim=1
             ).unsqueeze(0)
+            count = torch.ones(
+                (1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32
+            ).cuda()
+        elif pur_type == "euc_norm":
+            region_impurity = decoder_out.norm(dim=1).unsqueeze(0)
             count = torch.ones(
                 (1, 1, logit.shape[1], logit.shape[2]), dtype=torch.float32
             ).cuda()

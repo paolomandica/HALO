@@ -4,6 +4,7 @@ import copy
 
 import numpy as np
 import torch.nn.functional as F
+
 # from kmeans_pytorch import kmeans
 
 from PIL import Image
@@ -16,20 +17,27 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from core.utils.misc import get_color_pallete
 
-CITYSCAPES_MEAN = torch.Tensor(
-    [123.675, 116.28, 103.53]).reshape(1, 1, 3).numpy()
+CITYSCAPES_MEAN = torch.Tensor([123.675, 116.28, 103.53]).reshape(1, 1, 3).numpy()
 CITYSCAPES_STD = torch.Tensor([58.395, 57.12, 57.375]).reshape(1, 1, 3).numpy()
 
-np.random.seed(cfg.SEED+1)
+np.random.seed(cfg.SEED + 1)
 VIZ_LIST = list(np.random.randint(0, 500, 20))
 
 
-def select_pixels_to_label(score, active_regions, active_radius, mask_radius,
-                           active, selected, active_mask, ground_truth):
+def select_pixels_to_label(
+    score,
+    active_regions,
+    active_radius,
+    mask_radius,
+    active,
+    selected,
+    active_mask,
+    ground_truth,
+):
     for pixel in range(active_regions):
         values, indices_h = torch.max(score, dim=0)
         max_value, indices_w = torch.max(values, dim=0)
-        if max_value == -float('inf'):
+        if max_value == -float("inf"):
             break
         w = indices_w.item()
         h = indices_h[w].item()
@@ -45,16 +53,13 @@ def select_pixels_to_label(score, active_regions, active_radius, mask_radius,
         mask_end_h = h + mask_radius + 1
 
         # mask out
-        score[mask_start_h:mask_end_h,
-              mask_start_w:mask_end_w] = -float('inf')
-        active[mask_start_h:mask_end_h,
-               mask_start_w:mask_end_w] = True
-        selected[active_start_h:active_end_h,
-                 active_start_w:active_end_w] = True
+        score[mask_start_h:mask_end_h, mask_start_w:mask_end_w] = -float("inf")
+        active[mask_start_h:mask_end_h, mask_start_w:mask_end_w] = True
+        selected[active_start_h:active_end_h, active_start_w:active_end_w] = True
         # active sampling
-        active_mask[active_start_h:active_end_h, active_start_w:active_end_w] = \
-            ground_truth[active_start_h:active_end_h,
-                         active_start_w:active_end_w]
+        active_mask[
+            active_start_h:active_end_h, active_start_w:active_end_w
+        ] = ground_truth[active_start_h:active_end_h, active_start_w:active_end_w]
 
     return score, active, selected, active_mask
 
@@ -64,7 +69,6 @@ def to_np_array(tensor):
 
 
 def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_number):
-
     feature_extractor.eval()
     classifier.eval()
 
@@ -77,18 +81,24 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
     K = cfg.ACTIVE.K
 
     floating_region_score = FloatingRegionScore(
-        in_channels=cfg.MODEL.NUM_CLASSES, size=2*active_radius+1, purity_type=purity_type, K=K)
+        in_channels=cfg.MODEL.NUM_CLASSES,
+        size=2 * active_radius + 1,
+        purity_type=purity_type,
+        K=K,
+    )
 
     with torch.no_grad():
         idx = 0
         for tgt_data in tqdm(tgt_epoch_loader):
-            tgt_input, path2mask = tgt_data['img'], tgt_data['path_to_mask']
-            origin_mask, origin_label = \
-                tgt_data['origin_mask'], tgt_data['origin_label']
-            origin_size = tgt_data['size']
-            active_indicator = tgt_data['active']
-            selected_indicator = tgt_data['selected']
-            path2indicator = tgt_data['path_to_indicator']
+            tgt_input, path2mask = tgt_data["img"], tgt_data["path_to_mask"]
+            origin_mask, origin_label = (
+                tgt_data["origin_mask"],
+                tgt_data["origin_label"],
+            )
+            origin_size = tgt_data["size"]
+            active_indicator = tgt_data["active"]
+            selected_indicator = tgt_data["selected"]
+            path2indicator = tgt_data["path_to_indicator"]
 
             tgt_input = tgt_input.cuda(non_blocking=True)
 
@@ -109,52 +119,84 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                 active = active_indicator[i]
                 selected = selected_indicator[i]
 
-                output = tgt_out[i:i + 1, :, :, :]
+                output = tgt_out[i : i + 1, :, :, :]
                 output = F.interpolate(
-                    output, size=size, mode='bilinear', align_corners=True)
+                    output, size=size, mode="bilinear", align_corners=True
+                )
 
-                if uncertainty_type in ['certainty', 'hyperbolic'] or (purity_type in ['hyper', 'radius']) or (uncertainty_type == 'none' and cfg.MODEL.HYPER):
-                    decoder_out = decoder_out[i:i + 1, :, :, :]
+                if (
+                    uncertainty_type in ["certainty", "hyperbolic"]
+                    or (purity_type in ["hyper", "radius", "euc_norm"])
+                    or (uncertainty_type == "none" and cfg.MODEL.HYPER)
+                ):
+                    decoder_out = decoder_out[i : i + 1, :, :, :]
                     decoder_out = F.interpolate(
-                        decoder_out, size=size, mode='bilinear', align_corners=True)
+                        decoder_out, size=size, mode="bilinear", align_corners=True
+                    )
 
                 score, _, _ = floating_region_score(
-                    output, decoder_out=decoder_out, normalize=cfg.ACTIVE.NORMALIZE,
-                    unc_type=uncertainty_type, pur_type=purity_type, ground_truth=ground_truth)
+                    output,
+                    decoder_out=decoder_out,
+                    normalize=cfg.ACTIVE.NORMALIZE,
+                    unc_type=uncertainty_type,
+                    pur_type=purity_type,
+                    ground_truth=ground_truth,
+                )
                 score_clone = score.clone()
-                score[active] = -float('inf')
+                score[active] = -float("inf")
 
-                active_regions = math.ceil(num_pixel_cur * active_ratio / per_region_pixels)
+                active_regions = math.ceil(
+                    num_pixel_cur * active_ratio / per_region_pixels
+                )
                 score, active, selected, active_mask = select_pixels_to_label(
-                    score, active_regions, active_radius, mask_radius,
-                    active, selected, active_mask, ground_truth
+                    score,
+                    active_regions,
+                    active_radius,
+                    mask_radius,
+                    active,
+                    selected,
+                    active_mask,
+                    ground_truth,
                 )
 
                 active_mask_np = to_np_array(active_mask)
                 active_mask_IMG = Image.fromarray(active_mask_np)
                 active_mask_IMG.save(path2mask[i])
-                indicator = {
-                    'active': active,
-                    'selected': selected
-                }
+                indicator = {"active": active, "selected": selected}
                 torch.save(indicator, path2indicator[i])
 
             if cfg.ACTIVE.VIZ_MASK and idx in VIZ_LIST:
-                img_np = F.interpolate(tgt_input, size=size, mode='bilinear', align_corners=True).cpu(
-                ).numpy()[0].transpose(1, 2, 0)
-                img_np = (img_np * CITYSCAPES_STD +
-                          CITYSCAPES_MEAN).astype(np.uint8)
-                name = tgt_data['name'][0]
+                img_np = (
+                    F.interpolate(
+                        tgt_input, size=size, mode="bilinear", align_corners=True
+                    )
+                    .cpu()
+                    .numpy()[0]
+                    .transpose(1, 2, 0)
+                )
+                img_np = (img_np * CITYSCAPES_STD + CITYSCAPES_MEAN).astype(np.uint8)
+                name = tgt_data["name"][0]
                 score_np = score_clone.cpu().numpy()
                 visualization_plots(
-                    img_np, score_np, active_mask_np, round_number, name)
+                    img_np, score_np, active_mask_np, round_number, name
+                )
             idx += 1
 
     feature_extractor.train()
     classifier.train()
 
 
-def visualization_plots(img_np, score_np, active_mask_np, round_number, name, cmap1='gray', cmap2='viridis', alpha=0.7, title=None):
+def visualization_plots(
+    img_np,
+    score_np,
+    active_mask_np,
+    round_number,
+    name,
+    cmap1="gray",
+    cmap2="viridis",
+    alpha=0.7,
+    title=None,
+):
     fig, axes = plt.subplots(3, 1, constrained_layout=True, figsize=(10, 10))
 
     # plot original image
@@ -164,40 +206,39 @@ def visualization_plots(img_np, score_np, active_mask_np, round_number, name, cm
     axes[0].yaxis.set_visible(False)
 
     if title is None:
-        if cfg.ACTIVE.UNCERTAINTY == 'entropy':
-            title = 'Entropy + '
-        elif cfg.ACTIVE.UNCERTAINTY == 'hyperbolic':
-            title = 'Hyperbolic Uncertainty + '
-        elif cfg.ACTIVE.UNCERTAINTY == 'certainty':
-            title = 'Hyperbolic Certainty + '
+        if cfg.ACTIVE.UNCERTAINTY == "entropy":
+            title = "Entropy + "
+        elif cfg.ACTIVE.UNCERTAINTY == "hyperbolic":
+            title = "Hyperbolic Uncertainty + "
+        elif cfg.ACTIVE.UNCERTAINTY == "certainty":
+            title = "Hyperbolic Certainty + "
         else:
-            title = ''
+            title = ""
 
-        if cfg.ACTIVE.PURITY == 'ripu':
-            title += 'Impurity'
+        if cfg.ACTIVE.PURITY == "ripu":
+            title += "Impurity"
 
-    axes[1].set_title('Total Score: '+title)
+    axes[1].set_title("Total Score: " + title)
     axes[1].imshow(img_np, cmap=cmap1)
-    im_score = axes[1].imshow(score_np,  cmap=cmap2, alpha=alpha)
+    im_score = axes[1].imshow(score_np, cmap=cmap2, alpha=alpha)
     axes[1].xaxis.set_visible(False)
     axes[1].yaxis.set_visible(False)
     divider = make_axes_locatable(axes[1])
     cax = divider.append_axes("right", size="20%", pad=0.05)
-    plt.colorbar(im_score, cax=cax, location='right')
+    plt.colorbar(im_score, cax=cax, location="right")
 
     # plot original image
-    axes[2].set_title('Selected Pixel - Active Round: '+str(round_number))
+    axes[2].set_title("Selected Pixel - Active Round: " + str(round_number))
     axes[2].imshow(img_np, cmap=cmap1)
-    axes[2].imshow(active_mask_np, cmap='autumn', alpha=alpha)
+    axes[2].imshow(active_mask_np, cmap="autumn", alpha=alpha)
     axes[2].xaxis.set_visible(False)
     axes[2].yaxis.set_visible(False)
 
     # make directory if it doesn't exist
-    if not os.path.exists(cfg.SAVE_DIR + '/viz'):
-        os.makedirs(cfg.SAVE_DIR + '/viz')
-    name = name.rsplit('/', 1)[-1].rsplit('_', 1)[0]
-    file_name = cfg.SAVE_DIR + '/viz/' + \
-        name + '_round'+str(round_number)+'.png'
+    if not os.path.exists(cfg.SAVE_DIR + "/viz"):
+        os.makedirs(cfg.SAVE_DIR + "/viz")
+    name = name.rsplit("/", 1)[-1].rsplit("_", 1)[0]
+    file_name = cfg.SAVE_DIR + "/viz/" + name + "_round" + str(round_number) + ".png"
 
     plt.suptitle(name)
     plt.savefig(file_name)
