@@ -4,7 +4,7 @@ MODEL:
   FREEZE_BN: True
   HYPER: True
   REDUCED_CHANNELS: 64
-  WEIGHTED_NORM: True
+  HFR: True
 DATASETS:
   SOURCE_TRAIN: "gtav_train"
   TARGET_TRAIN: "cityscapes_train"
@@ -22,10 +22,10 @@ ACTIVE:
   NAME: 'HALO'
   SETTING: 'RA'
   SELECT_ITER: [0, 15000, 30000, 40000, 50000]
-  RATIO: 0.05
+  BUDGET: 0.05
   RADIUS_K: 1
   UNCERTAINTY: 'entropy'
-  PURITY: 'hyper'
+  PURITY: 'radius'
   VIZ_MASK: False
   NORMALIZE: True
   MASK_RADIUS_K: 5
@@ -33,10 +33,10 @@ ACTIVE:
 WANDB:
   ENABLE: True
   PROJECT: 'active_domain_adapt'
-  NAME: 'hyper_dlv3_64_WN_5_perc_entr_hyperimp_K200_RK5'
   GROUP: 'source_free'
   ENTITY: 'pinlab-sapienza'
-resume: 'results/pretrain_gtav/CHECKPOINT_PATH.ckpt'
-OUTPUT_DIR: 'results/source_free/OUTPUT_PATH'
+NAME: 'halo_radius_entropy_5perc'
+resume: 'results/pretrain_gtav/hyper_v3plus_ch_64_WN/model_global_step=25998.0_mIoU=38.99.ckpt'
+OUTPUT_DIR: 'results/source_free/'
 DEBUG: 0
 PROTOCOL: 'source_free'

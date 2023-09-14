@@ -5,7 +5,7 @@ MODEL:
   NUM_CLASSES: 16
   HYPER: True
   REDUCED_CHANNELS: 64
-  WEIGHTED_NORM: True
+  HFR: True
 DATASETS:
   SOURCE_TRAIN: "synthia_train"
   TARGET_TRAIN: "cityscapes_train"
@@ -21,7 +21,7 @@ SOLVER:
   BATCH_SIZE: 2
 ACTIVE:
   NAME: 'HALO'
-  RATIO: 1.
+  BUDGET: 1.
 WANDB:
   ENABLE: True
   PROJECT: 'active_domain_adapt'

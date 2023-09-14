@@ -1,13 +1,12 @@
 MODEL:
-  NAME: "deeplabv3plus_resnet101"   #  deeplabv2_resnet101 or deeplabv3plus_resnet101
+  NAME: "deeplabv2_resnet101"   #  deeplabv2_resnet101 or deeplabv3plus_resnet101
   WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
   FREEZE_BN: True
-  NUM_CLASSES: 16
   HYPER: True
   REDUCED_CHANNELS: 64
   HFR: True
 DATASETS:
-  SOURCE_TRAIN: "synthia_train"
+  SOURCE_TRAIN: "gtav_train"
   TARGET_TRAIN: "cityscapes_train"
   TEST: "cityscapes_val"
 INPUT:
@@ -15,19 +14,18 @@ INPUT:
   TARGET_INPUT_SIZE_TRAIN: (1280, 640)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
-  GPUS: [0,1,2,3]
+  GPUS: [4,5,6,7]
   BASE_LR: 1e-3
   NUM_ITER: 60000
   BATCH_SIZE: 2
-  CONSISTENT_LOSS: 0.
 ACTIVE:
   NAME: 'HALO'
   SETTING: 'RA'
   SELECT_ITER: [0, 15000, 30000, 40000, 50000]
-  BUDGET: 0.05
+  BUDGET: 0.022
   RADIUS_K: 1
   UNCERTAINTY: 'entropy'
-  PURITY: 'hyper'
+  PURITY: 'radius'
   VIZ_MASK: False
   NORMALIZE: True
   MASK_RADIUS_K: 5
@@ -35,10 +33,10 @@ ACTIVE:
 WANDB:
   ENABLE: True
   PROJECT: 'active_domain_adapt'
-  NAME: 'hyper_v3plus_64_WN_5_perc_hyperimp_entropy'
-  GROUP: 'source_target_synthia'
+  GROUP: 'source_free'
   ENTITY: 'pinlab-sapienza'
-resume: 'results/pretrain_synthia/CHECKPOINT_PATH.ckpt'
-OUTPUT_DIR: 'results/source_target_synthia/OUTPUT_PATH'
+NAME: 'halo_v2_radius_entropy_2perc'
+resume: 'results/pretrain_gtav/hyper_v2_ch_64/model_global_step=27998.0_mIoU=36.12.ckpt'
+OUTPUT_DIR: 'results/source_free/'
 DEBUG: 0
-PROTOCOL: 'source_target'
+PROTOCOL: 'source_free'

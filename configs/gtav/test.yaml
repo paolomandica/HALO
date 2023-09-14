@@ -1,25 +1,24 @@
 MODEL:
-  NAME: "deeplabv3plus_resnet101"
+  NAME: "deeplabv2_resnet101"
   WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
   FREEZE_BN: True
   HYPER: True
   REDUCED_CHANNELS: 64      # 256 or 10
-  WEIGHTED_NORM: True
+  HFR: True
 DATASETS:
   TEST: "cityscapes_val"
 INPUT:
   SOURCE_INPUT_SIZE_TRAIN: (1280, 720)
   TARGET_INPUT_SIZE_TRAIN: (1280, 640)
   INPUT_SIZE_TEST: (1280, 640)
-ACTIVE:
-  NAME: 'HALO'
 SOLVER:
   GPUS: [0]
 TEST:
   VIZ_SCORE: False
   VIZ_WRONG: False
-  SAVE_EMBED: True
+  SAVE_EMBED: False
   BATCH_SIZE: 1
-resume: 'results/source_target/halo_dlv3plus_acdc/halo_dlv3plus_acdc.ckpt'
-OUTPUT_DIR: 'results/source_target/halo_dlv3plus_acdc'
+NAME: 'halo_v2_radius_entropy_2perc'
+resume: 'results/source_target/halo_v2_radius_entropy_2perc/model_global_step=27998.0_mIoU=70.83.ckpt'
+OUTPUT_DIR: 'results/source_target/'
 DEBUG: 0

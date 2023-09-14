@@ -10,15 +10,15 @@ _C.MODEL.NUM_CLASSES = 19
 _C.MODEL.WEIGHTS = ""
 _C.MODEL.FREEZE_BN = True
 _C.MODEL.HYPER = True
-_C.MODEL.CURVATURE = 1.
+_C.MODEL.CURVATURE = 1.0
 _C.MODEL.REDUCED_CHANNELS = 64
-_C.MODEL.WEIGHTED_NORM = True
+_C.MODEL.HFR = True
 
 _C.WANDB = CN()
 _C.WANDB.ENABLE = False
-_C.WANDB.GROUP = 'deeplabv2_r101_pretrain'
-_C.WANDB.PROJECT = 'active_domain_adapt'
-_C.WANDB.ENTITY = 'pinlab-sapienza'
+_C.WANDB.GROUP = "deeplabv2_r101_pretrain"
+_C.WANDB.PROJECT = "active_domain_adapt"
+_C.WANDB.ENTITY = "pinlab-sapienza"
 
 _C.INPUT = CN()
 _C.INPUT.SOURCE_INPUT_SIZE_TRAIN = (1280, 720)
@@ -43,7 +43,7 @@ _C.SOLVER.GPUS = [0, 1, 2, 3]
 _C.SOLVER.NUM_ITER = 60000
 
 # optimizer and learning rate
-_C.SOLVER.LR_METHOD = 'poly'
+_C.SOLVER.LR_METHOD = "poly"
 _C.SOLVER.BASE_LR = 1e-3
 _C.SOLVER.LR_POWER = 0.5
 _C.SOLVER.MOMENTUM = 0.9
@@ -55,7 +55,7 @@ _C.SOLVER.BATCH_SIZE = 2
 _C.SOLVER.BATCH_SIZE_VAL = 1
 
 # hyper-parameters
-_C.SOLVER.CONSISTENT_LOSS = 0.
+_C.SOLVER.CONSISTENT_LOSS = 0.0
 _C.SOLVER.NEGATIVE_LOSS = 1.0
 _C.SOLVER.NEGATIVE_THRESHOLD = 0.05
 
@@ -65,13 +65,13 @@ _C.SOLVER.LCR_TYPE = "l1"
 
 _C.ACTIVE = CN()
 # active strategy
-_C.ACTIVE.NAME = 'HALO'
-_C.ACTIVE.UNCERTAINTY = 'entropy'
-_C.ACTIVE.PURITY = 'hyper'
-_C.ACTIVE.SETTING = 'RA'
+_C.ACTIVE.NAME = "HALO"
+_C.ACTIVE.UNCERTAINTY = "entropy"
+_C.ACTIVE.PURITY = "hyper"
+_C.ACTIVE.SETTING = "RA"
 _C.ACTIVE.SELECT_ITER = [0, 15000, 30000, 40000, 50000]
 # total selection ratio per image
-_C.ACTIVE.RATIO = 0.05
+_C.ACTIVE.BUDGET = 0.05
 # hyper-parameters
 _C.ACTIVE.RADIUS_K = 1
 _C.ACTIVE.NORMALIZE = True

@@ -4,7 +4,7 @@ MODEL:
   FREEZE_BN: True
   HYPER: True
   REDUCED_CHANNELS: 64
-  WEIGHTED_NORM: True
+  HFR: True
 DATASETS:
   SOURCE_TRAIN: "cityscapes_train"
   TEST: "cityscapes_val"

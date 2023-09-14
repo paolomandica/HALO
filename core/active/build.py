@@ -75,7 +75,7 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
     per_region_pixels = (2 * cfg.ACTIVE.RADIUS_K + 1) ** 2
     active_radius = cfg.ACTIVE.RADIUS_K
     mask_radius = cfg.ACTIVE.MASK_RADIUS_K
-    active_ratio = cfg.ACTIVE.RATIO / len(cfg.ACTIVE.SELECT_ITER)
+    active_budget = cfg.ACTIVE.BUDGET / len(cfg.ACTIVE.SELECT_ITER)
     uncertainty_type = cfg.ACTIVE.UNCERTAINTY
     purity_type = cfg.ACTIVE.PURITY
     K = cfg.ACTIVE.K
@@ -146,7 +146,7 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                 score[active] = -float("inf")
 
                 active_regions = math.ceil(
-                    num_pixel_cur * active_ratio / per_region_pixels
+                    num_pixel_cur * active_budget / per_region_pixels
                 )
                 score, active, selected, active_mask = select_pixels_to_label(
                     score,

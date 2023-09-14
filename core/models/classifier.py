@@ -93,7 +93,7 @@ class DepthwiseSeparableASPP(nn.Module):
         padding_series,
         num_classes,
         norm_layer,
-        weighted_norm,
+        hfr,
         reduced_channels=512,
     ):
         super(DepthwiseSeparableASPP, self).__init__()
@@ -160,7 +160,7 @@ class DepthwiseSeparableASPP(nn.Module):
         decoder_out_channels = 512
 
         self.old_decoder = (
-            False if reduced_channels != decoder_out_channels or weighted_norm else True
+            False if reduced_channels != decoder_out_channels or hfr else True
         )
 
         if not self.old_decoder:
@@ -195,7 +195,7 @@ class DepthwiseSeparableASPP(nn.Module):
 
             # init weighted normalization mlp
             self.wn_mlp = None
-            if weighted_norm:
+            if hfr:
                 self.wn_mlp = nn.Sequential(
                     nn.Linear(decoder_out_channels, decoder_out_channels),
                     nn.BatchNorm1d(decoder_out_channels),
@@ -388,7 +388,7 @@ class DepthwiseSeparableASPP_Hyper(nn.Module):
         num_classes,
         norm_layer,
         reduced_channels,
-        weighted_norm,
+        hfr,
     ):
         super(DepthwiseSeparableASPP_Hyper, self).__init__()
 
@@ -483,7 +483,7 @@ class DepthwiseSeparableASPP_Hyper(nn.Module):
 
         # init weighted normalization mlp
         self.wn_mlp = None
-        if weighted_norm:
+        if hfr:
             self.wn_mlp = nn.Sequential(
                 nn.Linear(reduced_channels, reduced_channels),
                 nn.BatchNorm1d(reduced_channels),

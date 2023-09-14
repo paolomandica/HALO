@@ -5,7 +5,7 @@ MODEL:
   NUM_CLASSES: 16
   HYPER: True
   REDUCED_CHANNELS: 64
-  WEIGHTED_NORM: True
+  HFR: True
 DATASETS:
   SOURCE_TRAIN: "synthia_train"
   TARGET_TRAIN: "cityscapes_train"
@@ -23,7 +23,7 @@ ACTIVE:
   NAME: 'HALO'
   SETTING: 'RA'
   SELECT_ITER: [0, 15000, 30000, 40000, 50000]
-  RATIO: 0.05
+  BUDGET: 0.05
   RADIUS_K: 1
   UNCERTAINTY: 'entropy'
   PURITY: 'hyper'
