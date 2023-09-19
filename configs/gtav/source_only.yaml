@@ -9,19 +9,19 @@ DATASETS:
   SOURCE_TRAIN: "cityscapes_train"
   TEST: "cityscapes_val"
 INPUT:
-  SOURCE_INPUT_SIZE_TRAIN: (1280, 720)
+  SOURCE_INPUT_SIZE_TRAIN: (1280, 640)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
-  GPUS: [4,5,6,7]
+  GPUS: [0,1,2,3]
   BATCH_SIZE: 2
   BASE_LR: 1e-3
   NUM_ITER: 60000
   WARMUP_ITERS: 600
 WANDB:
   ENABLE: True
-  NAME: 'cityscapes_pretrain'
   GROUP: 'gtav_pretraining'
   PROJECT: 'active_domain_adapt'
   ENTITY: 'pinlab-sapienza'
-OUTPUT_DIR: 'results/pretrain_gtav/cityscapes_pretrain'
+NAME: 'cityscapes_pretrain'
+OUTPUT_DIR: 'results/pretrain_gtav/'
 PROTOCOL: 'source'

@@ -21,6 +21,6 @@ TEST:
   VIZ_WRONG: False
   SAVE_EMBED: False
   BATCH_SIZE: 1
-resume: 'results/source_target_synthia/CHECKPOINT_PATH.ckpt'
-OUTPUT_DIR: 'results/source_target_synthia/OUTPUT_PATH'
+resume: 'results/source_target_synthia/halo_v2_radius_entropy_2perc/model_global_step=21998.0_mIoU=72.48.ckpt'
+OUTPUT_DIR: 'results/source_target_synthia'
 DEBUG: 0
