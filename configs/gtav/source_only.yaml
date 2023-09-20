@@ -1,20 +1,20 @@
 MODEL:
-  NAME: "deeplabv3plus_resnet101"
+  NAME: "segformer_b2"   # deeplabv3plus_resnet101
   WEIGHTS: 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth'
   FREEZE_BN: True
   HYPER: True
   REDUCED_CHANNELS: 64
   HFR: True
 DATASETS:
-  SOURCE_TRAIN: "cityscapes_train"
+  SOURCE_TRAIN: "gtav_train"
   TEST: "cityscapes_val"
 INPUT:
-  SOURCE_INPUT_SIZE_TRAIN: (1280, 640)
+  SOURCE_INPUT_SIZE_TRAIN: (1280, 720)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
-  GPUS: [0,1,2,3]
+  GPUS: [4,5,6,7]
   BATCH_SIZE: 2
-  BASE_LR: 1e-3
+  BASE_LR: 6e-5
   NUM_ITER: 60000
   WARMUP_ITERS: 600
 WANDB:
@@ -22,6 +22,6 @@ WANDB:
   GROUP: 'gtav_pretraining'
   PROJECT: 'active_domain_adapt'
   ENTITY: 'pinlab-sapienza'
-NAME: 'cityscapes_pretrain'
+NAME: 'halo_gta_pretrain_segformer_b2_hf'
 OUTPUT_DIR: 'results/pretrain_gtav/'
 PROTOCOL: 'source'
