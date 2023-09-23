@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 # Define x and y values
 budget = [0.1, 1, 2.2, 5, 10, 25, 50]
-miou = [69.6, 73.1, 73.5, 74.1, 73.4, 72.8, 72.3]
+miou = [67.5, 72.9, 73.9, 74.5, 73.6, 72.9, 72.2]
 fully_sup = 71.9
 budget_str = [str(y) + "%" for y in budget]
 miou_str = [str(y) for y in miou]
@@ -61,4 +61,4 @@ plt.ylabel("mIoU (%)")
 
 # Display the plot
 plt.show()
-plt.savefig("visualizations/budget_plot.png", dpi=300)
+plt.savefig("analysis/budget_plot.png", dpi=300)

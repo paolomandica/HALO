@@ -137,3 +137,4 @@ visualizzazioni
 visualizzazioni2
 visualizations
 *.png
+!analysis/budget_plot.png
