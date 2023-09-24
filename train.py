@@ -121,7 +121,7 @@ def main():
         log_every_n_steps=50,
         accumulate_grad_batches=1,
         sync_batchnorm=True,
-        strategy="ddp",  # ddp_find_unused_parameters_true
+        strategy="ddp",
         num_nodes=1,
         logger=wandb_logger,
         callbacks=callbacks,
