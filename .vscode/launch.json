@@ -105,6 +105,26 @@
                 "NAME",
                 "debug",
             ]
+        },
+        {
+            "name": "ripu",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/train.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "-cfg",
+                "configs/gtav/ripu.yaml",
+                "OUTPUT_DIR",
+                "results/source_target/",
+                "WANDB.ENABLE",
+                "False",
+                "SOLVER.GPUS",
+                "[0]",
+                "NAME",
+                "debug",
+            ]
         }
     ]
 }

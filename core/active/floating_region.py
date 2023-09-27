@@ -151,13 +151,6 @@ class FloatingRegionScore(nn.Module):
         logit = logit.squeeze(dim=0)  # [19, h ,w]
         p = torch.softmax(logit, dim=0)  # [19, h, w]
 
-        assert unc_type in [
-            "entropy",
-            "none",
-            "oracle_acc",
-            "pixel_entropy",
-        ], "error: unc_type '{}' not implemented".format(unc_type)
-
         if self.entropy_conv.weight.device != logit.device:
             self.entropy_conv = self.entropy_conv.to(logit.device)
             self.purity_conv = self.purity_conv.to(logit.device)
@@ -171,6 +164,13 @@ class FloatingRegionScore(nn.Module):
 
         if pur_type == "ripu":
             predict = torch.argmax(p, dim=0)  # [h, w]
+            region_impurity, count = self.compute_region_impurity(
+                predict, self.in_channels
+            )
+        elif pur_type == "oracle_ripu":
+            # use ground truth instead of prediction
+            predict = ground_truth.clone()
+            predict[ground_truth == 255] = p.argmax(dim=0)[ground_truth == 255]
             region_impurity, count = self.compute_region_impurity(
                 predict, self.in_channels
             )
