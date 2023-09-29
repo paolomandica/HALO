@@ -19,6 +19,7 @@ SOLVER:
   WARMUP_ITERS: 600
 WANDB:
   ENABLE: True
+  NAME: 'cityscapes_pretrain'
   GROUP: 'gtav_pretraining'
   PROJECT: 'active_domain_adapt'
   ENTITY: 'pinlab-sapienza'
