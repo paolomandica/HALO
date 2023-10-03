@@ -11,10 +11,11 @@ from geoopt.optim import RiemannianSGD, RiemannianAdam
 from core.datasets import build_dataset
 from core.configs import cfg
 from core.datasets.dataset_path_catalog import DatasetCatalog
-from core.loss.local_consistent_loss import LocalConsistentLoss
+from core.losses.local_consistent_loss import LocalConsistentLoss
 from core.models import build_feature_extractor, build_classifier
 from core.utils.misc import load_checkpoint
-from core.loss.negative_learning_loss import NegativeLearningLoss
+from core.utils.optim import build_optimizer, build_scheduler
+from core.losses.negative_learning_loss import NegativeLearningLoss
 from core.active.build import RegionSelection
 
 from core.utils.visualize import visualize_wrong
@@ -206,91 +207,49 @@ class BaseLearner(pl.LightningModule):
         self.targets = np.array([])
 
     def configure_optimizers(self):
-        if self.cfg.SOLVER.OPTIM == "adam":
-            if self.hyper:
-                optim = RiemannianAdam
-            else:
-                optim = torch.optim.AdamW
+        optim_type = self.cfg.SOLVER.OPTIM
+        lr = self.cfg.SOLVER.BASE_LR
+        weight_decay = self.cfg.SOLVER.WEIGHT_DECAY
+        momentum = self.cfg.SOLVER.MOMENTUM
 
-            # init optimizers
-            optimizer_fea = optim(
-                self.feature_extractor.parameters(),
-                lr=self.cfg.SOLVER.BASE_LR,
-                weight_decay=self.cfg.SOLVER.WEIGHT_DECAY,
-            )
-            optimizer_cls = optim(
-                self.classifier.parameters(),
-                lr=self.cfg.SOLVER.BASE_LR * 10,
-                weight_decay=self.cfg.SOLVER.WEIGHT_DECAY,
-            )
-        elif self.cfg.SOLVER.OPTIM == "sgd":
-            if self.hyper:
-                optim = RiemannianSGD
-            else:
-                optim = torch.optim.SGD
-
-            # init optimizers
-            optimizer_fea = optim(
-                self.feature_extractor.parameters(),
-                lr=self.cfg.SOLVER.BASE_LR,
-                momentum=self.cfg.SOLVER.MOMENTUM,
-                weight_decay=self.cfg.SOLVER.WEIGHT_DECAY,
-            )
-            optimizer_cls = optim(
-                self.classifier.parameters(),
-                lr=self.cfg.SOLVER.BASE_LR * 10,
-                momentum=self.cfg.SOLVER.MOMENTUM,
-                weight_decay=self.cfg.SOLVER.WEIGHT_DECAY,
-            )
-        else:
-            raise NotImplementedError("Optimizer {} not supported".format(self.cfg.SOLVER.OPTIM))
-
+        # init optimizers
+        optimizer_fea = build_optimizer(
+            self.feature_extractor,
+            self.hyper,
+            optim_type,
+            lr,
+            weight_decay,
+            momentum,
+        )
+        optimizer_cls = build_optimizer(
+            self.classifier, self.hyper, optim_type, lr * 10, weight_decay, momentum
+        )
         optimizers = [optimizer_fea, optimizer_cls]
+        self.print(optimizer_fea)
 
         # init schedulers
+        scheduler_type = self.cfg.SOLVER.SCHEDULER
+        lr_power = self.cfg.SOLVER.LR_POWER
         num_iters = self.cfg.SOLVER.NUM_ITER // len(self.cfg.SOLVER.GPUS)
+        warmup_iters = self.cfg.SOLVER.WARMUP_ITERS
+        num_iters -= warmup_iters
 
-        if self.cfg.SOLVER.WARMUP_ITERS > 0:
-            warmup_iters = self.cfg.SOLVER.WARMUP_ITERS
-            num_iters -= warmup_iters
-
-            # feature extractor scheduler
-            linear_fea = LinearLR(
-                optimizer_fea, start_factor=0.01, total_iters=warmup_iters
-            )
-            poly_fea = PolynomialLR(
-                optimizer_fea, num_iters, power=self.cfg.SOLVER.LR_POWER
-            )
-            # poly_fea = ConstantLR(optimizer_fea, factor=1., total_iters=num_iters)
-            scheduler_fea = SequentialLR(
-                optimizer_fea,
-                schedulers=[linear_fea, poly_fea],
-                milestones=[warmup_iters],
-            )
-
-            # classifier scheduler
-            linear_cls = LinearLR(
-                optimizer_cls, start_factor=0.01, total_iters=warmup_iters
-            )
-            poly_cls = PolynomialLR(
-                optimizer_cls, num_iters, power=self.cfg.SOLVER.LR_POWER
-            )
-            # poly_cls = ConstantLR(optimizer_cls, factor=1., total_iters=num_iters)
-            scheduler_cls = SequentialLR(
-                optimizer_cls,
-                schedulers=[linear_cls, poly_cls],
-                milestones=[warmup_iters],
-            )
-
-        else:
-            scheduler_fea = PolynomialLR(
-                optimizer_fea, num_iters, power=self.cfg.SOLVER.LR_POWER
-            )
-            scheduler_cls = PolynomialLR(
-                optimizer_cls, num_iters, power=self.cfg.SOLVER.LR_POWER
-            )
-
+        scheduler_fea = build_scheduler(
+            optimizer_fea,
+            scheduler_type,
+            num_iters,
+            warmup_iters,
+            lr_power,
+        )
+        scheduler_cls = build_scheduler(
+            optimizer_cls,
+            scheduler_type,
+            num_iters,
+            warmup_iters,
+            lr_power,
+        )
         schedulers = [scheduler_fea, scheduler_cls]
+        self.print(scheduler_fea)
 
         return optimizers, schedulers
 
@@ -537,9 +496,10 @@ class SourceTargetLearner(SourceFreeLearner):
     def __init__(self, cfg):
         super().__init__(cfg)
 
-        self.local_consistent_loss = LocalConsistentLoss(
-            cfg.MODEL.NUM_CLASSES, cfg.SOLVER.LCR_TYPE
-        )
+        if self.cfg.SOLVER.CONSISTENT_LOSS > 0:
+            self.local_consistent_loss = LocalConsistentLoss(
+                cfg.MODEL.NUM_CLASSES, cfg.SOLVER.LCR_TYPE
+            )
 
     def training_step(self, batch, batch_idx):
         optimizers = self.optimizers()
@@ -671,9 +631,10 @@ class FullySupervisedLearner(SourceFreeLearner):
     def __init__(self, cfg):
         super().__init__(cfg)
 
-        self.local_consistent_loss = LocalConsistentLoss(
-            cfg.MODEL.NUM_CLASSES, cfg.SOLVER.LCR_TYPE
-        )
+        if self.cfg.SOLVER.CONSISTENT_LOSS > 0:
+            self.local_consistent_loss = LocalConsistentLoss(
+                cfg.MODEL.NUM_CLASSES, cfg.SOLVER.LCR_TYPE
+            )
 
         # remove active learning dataloader
         self.active_loader = None
