@@ -1,5 +1,5 @@
 MODEL:
-  NAME: "segformer_b2"   #  deeplabv2_resnet101 or deeplabv3plus_resnet101
+  NAME: "segformer_b4"   #  deeplabv2_resnet101 or deeplabv3plus_resnet101
   WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
   FREEZE_BN: True
   HYPER: True
@@ -16,6 +16,7 @@ INPUT:
 SOLVER:
   GPUS: [0,1,2,3]
   BASE_LR: 1e-3
+  OPTIM: "sgd"
   NUM_ITER: 60000
   BATCH_SIZE: 2
   WARMUP_ITERS: 600

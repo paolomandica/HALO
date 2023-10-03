@@ -206,7 +206,7 @@ class BaseLearner(pl.LightningModule):
         self.targets = np.array([])
 
     def configure_optimizers(self):
-        if self.segformer_config is not None:
+        if self.cfg.SOLVER.OPTIM == "adam":
             if self.hyper:
                 optim = RiemannianAdam
             else:
@@ -223,8 +223,7 @@ class BaseLearner(pl.LightningModule):
                 lr=self.cfg.SOLVER.BASE_LR * 10,
                 weight_decay=self.cfg.SOLVER.WEIGHT_DECAY,
             )
-
-        else:
+        elif self.cfg.SOLVER.OPTIM == "sgd":
             if self.hyper:
                 optim = RiemannianSGD
             else:
@@ -243,6 +242,8 @@ class BaseLearner(pl.LightningModule):
                 momentum=self.cfg.SOLVER.MOMENTUM,
                 weight_decay=self.cfg.SOLVER.WEIGHT_DECAY,
             )
+        else:
+            raise NotImplementedError("Optimizer {} not supported".format(self.cfg.SOLVER.OPTIM))
 
         optimizers = [optimizer_fea, optimizer_cls]
 

@@ -86,19 +86,22 @@ def build_classifier(cfg, encoder_config=None):
         # }
         assert encoder_config is not None
 
-        # classifier = SegFormerSegmentationHead(
-        #     channels=output_channels[backbone_name],
-        #     num_classes=cfg.MODEL.NUM_CLASSES,
-        #     hyper=cfg.MODEL.HYPER,
-        #     hfr=cfg.MODEL.HFR,
-        # )
-
         classifier = SegformerDecodeHead(
             config=encoder_config,
             num_classes=cfg.MODEL.NUM_CLASSES,
             hyper=cfg.MODEL.HYPER,
             hfr=cfg.MODEL.HFR,
         )
+
+        # classifier = DepthwiseSeparableASPP_Hyper(
+        #     inplanes=512,
+        #     dilation_series=[1, 6, 12, 18],
+        #     padding_series=[1, 6, 12, 18],
+        #     num_classes=cfg.MODEL.NUM_CLASSES,
+        #     norm_layer=bn_layer,
+        #     reduced_channels=cfg.MODEL.REDUCED_CHANNELS,
+        #     hfr=cfg.MODEL.HFR,
+        # )
 
     else:
         raise NotImplementedError("Unsupported classifier: {}.".format(model_name))

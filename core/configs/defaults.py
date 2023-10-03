@@ -43,7 +43,7 @@ _C.SOLVER.GPUS = [0, 1, 2, 3]
 _C.SOLVER.NUM_ITER = 60000
 
 # optimizer and learning rate
-_C.SOLVER.LR_METHOD = "poly"
+_C.SOLVER.OPTIM = "sgd"
 _C.SOLVER.BASE_LR = 1e-3
 _C.SOLVER.LR_POWER = 0.5
 _C.SOLVER.MOMENTUM = 0.9
