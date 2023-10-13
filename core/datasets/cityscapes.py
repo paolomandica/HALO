@@ -7,21 +7,21 @@ from PIL import Image
 
 class cityscapesDataSet(data.Dataset):
     def __init__(
-            self,
-            data_root,
-            data_list,
-            max_iters=None,
-            num_classes=19,
-            split="train",
-            transform=None,
-            ignore_label=255,
-            debug=False,
-            cfg=None,
-            empty=False,
+        self,
+        data_root,
+        data_list,
+        max_iters=None,
+        num_classes=19,
+        split="train",
+        transform=None,
+        ignore_label=255,
+        debug=False,
+        cfg=None,
+        empty=False,
     ):
-        self.active = True if split == 'active' else False
-        if split == 'active':
-            split = 'train'
+        self.active = True if split == "active" else False
+        if split == "active":
+            split = "train"
         self.split = split
         self.NUM_CLASS = num_classes
         self.data_root = data_root
@@ -46,16 +46,14 @@ class cityscapesDataSet(data.Dataset):
                 self.data_list.append(
                     {
                         "img": os.path.join(
-                            self.data_root, 
-                            "leftImg8bit/%s/%s" % (self.split, name)
+                            self.data_root, "leftImg8bit/%s/%s" % (self.split, name)
                         ),
                         "label": os.path.join(
                             self.data_root,
                             "gtFine/%s/%s"
                             % (
                                 self.split,
-                                name.split("_leftImg8bit")[0]
-                                + "_gtFine_labelIds.png",
+                                name.split("_leftImg8bit")[0] + "_gtFine_labelIds.png",
                                 # name + "_gtFine_labelIds.png",
                             ),
                         ),
@@ -64,25 +62,25 @@ class cityscapesDataSet(data.Dataset):
                             "gtMask/%s/%s"
                             % (
                                 self.split,
-                                name.split("_leftImg8bit")[0]
-                                + "_gtFine_labelIds.png",
+                                name.split("_leftImg8bit")[0] + "_gtFine_labelIds.png",
                             ),
                         ),
                         "name": name,
-                        'indicator': os.path.join(
+                        "indicator": os.path.join(
                             cfg.SAVE_DIR,
                             "gtIndicator/%s/%s"
                             % (
                                 "train",
-                                name.split("_leftImg8bit")[0]
-                                + "_indicator.pth",
+                                name.split("_leftImg8bit")[0] + "_indicator.pth",
                             ),
-                        )
+                        ),
                     }
                 )
 
         if max_iters is not None:
-            self.data_list = self.data_list * int(np.ceil(float(max_iters) / len(self.data_list)))
+            self.data_list = self.data_list * int(
+                np.ceil(float(max_iters) / len(self.data_list))
+            )
 
         # --------------------------------------------------------------------------------
         # A list of all labels
@@ -227,10 +225,10 @@ class cityscapesDataSet(data.Dataset):
             index = 0
         datafiles = self.data_list[index]
 
-        image = Image.open(datafiles["img"]).convert('RGB')
+        image = Image.open(datafiles["img"]).convert("RGB")
         label = np.array(Image.open(datafiles["label"]), dtype=np.uint8)
         label_mask = None
-        if self.split == 'train':
+        if self.split == "train":
             label_mask = np.array(Image.open(datafiles["label_mask"]), dtype=np.uint8)
         else:
             # test or val, mask is useless
@@ -242,9 +240,9 @@ class cityscapesDataSet(data.Dataset):
         active_indicator = torch.tensor([0])
         active_selected = torch.tensor([0])
         if self.active:
-            indicator = torch.load(datafiles['indicator'])
-            active_indicator = indicator['active']
-            active_selected = indicator['selected']
+            indicator = torch.load(datafiles["indicator"])
+            active_indicator = indicator["active"]
+            active_selected = indicator["selected"]
             # if first time load, initialize it
             if active_indicator.size() == (1,):
                 active_indicator = torch.zeros_like(origin_mask, dtype=torch.bool)
@@ -273,16 +271,18 @@ class cityscapesDataSet(data.Dataset):
 
         ret_data = {
             "img": image,  # data
-            'label': label,  # for test
-            'mask': label_mask,  # for train
-            'name': datafiles['name'],  # for test to store the results
-            'path_to_mask': datafiles['label_mask'],  # for active to store new mask
-            'path_to_indicator': datafiles['indicator'],  # store new indicator
-            'size': torch.tensor([h, w]),  # for active to interpolate the output to original size
-            'origin_mask': origin_mask,  # mask without transforms for active
-            'origin_label': origin_label,  # label without transforms for active
-            'active': active_indicator,  # indicate region or pixels can not be selected
-            'selected': active_selected,  # indicate the pixel have been selected, can calculate the class-wise ratio of selected samples
+            "label": label,  # for test
+            "mask": label_mask,  # for train
+            "name": datafiles["name"],  # for test to store the results
+            "path_to_mask": datafiles["label_mask"],  # for active to store new mask
+            "path_to_indicator": datafiles["indicator"],  # store new indicator
+            "size": torch.tensor(
+                [h, w]
+            ),  # for active to interpolate the output to original size
+            "origin_mask": origin_mask,  # mask without transforms for active
+            "origin_label": origin_label,  # label without transforms for active
+            "active": active_indicator,  # indicate region or pixels can not be selected
+            "selected": active_selected,  # indicate the pixel have been selected, can calculate the class-wise ratio of selected samples
         }
 
         return ret_data

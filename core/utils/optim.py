@@ -3,10 +3,7 @@ from torch.optim.lr_scheduler import LinearLR, SequentialLR, PolynomialLR, Const
 from geoopt.optim import RiemannianSGD, RiemannianAdam
 
 optimizers = {
-    "hyper": {
-        "sgd": RiemannianSGD,
-        "adam": RiemannianAdam,
-    },
+    "hyper": {"sgd": RiemannianSGD, "adam": AdamW},  # RiemannianAdam,
     "euclidean": {
         "sgd": SGD,
         "adam": AdamW,

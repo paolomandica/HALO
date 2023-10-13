@@ -225,7 +225,6 @@ class BaseLearner(pl.LightningModule):
             self.classifier, self.hyper, optim_type, lr * 10, weight_decay, momentum
         )
         optimizers = [optimizer_fea, optimizer_cls]
-        self.print(optimizer_fea)
 
         # init schedulers
         scheduler_type = self.cfg.SOLVER.SCHEDULER
@@ -249,7 +248,6 @@ class BaseLearner(pl.LightningModule):
             lr_power,
         )
         schedulers = [scheduler_fea, scheduler_cls]
-        self.print(scheduler_fea)
 
         return optimizers, schedulers
 
@@ -328,7 +326,7 @@ class SourceFreeLearner(BaseLearner):
     def __init__(self, cfg):
         super().__init__(cfg)
 
-        self.debug = bool(cfg.DEBUG)
+        self.debug = cfg.DEBUG
         if self.debug:
             print(">>>>>>>>>>>>>>>> Debug Mode >>>>>>>>>>>>>>>>")
 

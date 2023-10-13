@@ -13,9 +13,13 @@
             "justMyCode": false,
             "args": [
                 "-cfg",
-                "configs/gtav/hyper_deeplabv3plus_r101_src.yaml",
+                "configs/gtav/source_only.yaml",
                 "OUTPUT_DIR",
-                "results/pretrain_gtav/debug"
+                "results/pretrain_gtav/debug",
+                "WANDB.ENABLE",
+                "False",
+                "SOLVER.GPUS",
+                "[0]"
             ]
         },
         {
