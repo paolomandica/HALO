@@ -44,7 +44,6 @@ class SegformerDecodeHead(SegformerPreTrainedModel):
         )
         self.batch_norm = nn.BatchNorm2d(config.decoder_hidden_size)
         self.activation = nn.ReLU()
-
         self.dropout = nn.Dropout(config.classifier_dropout_prob)
 
         if hfr:

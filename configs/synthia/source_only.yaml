@@ -1,11 +1,11 @@
 MODEL:
-  NAME: "deeplabv3plus_resnet101"
+  NAME: "segformer_b4"   # deeplabv3plus_resnet101
   WEIGHTS: 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth'
   FREEZE_BN: True
-  NUM_CLASSES: 16
   HYPER: True
+  HFR: False
   REDUCED_CHANNELS: 64
-  HFR: True
+  NUM_CLASSES: 16
 DATASETS:
   SOURCE_TRAIN: "synthia_train"
   TEST: "cityscapes_val"
@@ -13,15 +13,19 @@ INPUT:
   SOURCE_INPUT_SIZE_TRAIN: (1280, 720)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
-  GPUS: [0,1,2,3]
+  GPUS: [4,5,6,7]
   BATCH_SIZE: 2
-  BASE_LR: 1e-3
+  BASE_LR: 1e-5
+  OPTIM: "adam"
+  SCHEDULER: "poly"
+  WEIGHT_DECAY: 1e-2
   NUM_ITER: 60000
+  WARMUP_ITERS: 1000
 WANDB:
   ENABLE: True
-  NAME: 'synthia_hyper_v3plus_ch_64_temp'
   GROUP: 'synthia_pretraining'
   PROJECT: 'active_domain_adapt'
-  ENTITY: 'syn2real'
-OUTPUT_DIR: 'results/pretrain_synthia/OUTPUT_PATH'
+  ENTITY: 'pinlab-sapienza'
+NAME: 'segformer_b4_hyper'
+OUTPUT_DIR: 'results/pretrain_synthia/'
 PROTOCOL: 'source'
