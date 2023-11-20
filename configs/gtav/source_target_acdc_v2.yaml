@@ -1,0 +1,41 @@
+MODEL:
+  NAME: "deeplabv2_resnet101"   #  deeplabv2_resnet101 or deeplabv3plus_resnet101
+  WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
+  FREEZE_BN: True
+  HYPER: True
+  REDUCED_CHANNELS: 64
+  HFR: True
+DATASETS:
+  SOURCE_TRAIN: "cityscapes_train"
+  TARGET_TRAIN: "acdc_train"
+  TEST: "acdc_val"
+INPUT:
+  SOURCE_INPUT_SIZE_TRAIN: (1280, 640)
+  TARGET_INPUT_SIZE_TRAIN: (1280, 640)
+  INPUT_SIZE_TEST: (1280, 640)
+SOLVER:
+  GPUS: [0,1,2,3]
+  BASE_LR: 1e-3
+  NUM_ITER: 60000
+  BATCH_SIZE: 2
+  WARMUP_ITERS: 600
+ACTIVE:
+  NAME: 'HALO'
+  SETTING: 'RA'
+  SELECT_ITER: [0, 15000, 30000, 40000, 50000]
+  RATIO: 0.05
+  RADIUS_K: 1
+  UNCERTAINTY: 'entropy'   # 'entropy' or 'none'
+  PURITY: 'radius'          # 'ripu' or 'hyper' or 'none'
+  VIZ_MASK: False
+  NORMALIZE: True
+WANDB:
+  ENABLE: True
+  PROJECT: 'active_domain_adapt'
+  GROUP: 'source_target_acdc'
+  ENTITY: 'pinlab-sapienza'
+NAME: 'halo_cs_to_acdc_v2_2perc'
+OUTPUT_DIR: 'results/source_target_acdc/'
+resume: 'results/pretrain_gtav/cityscapes_pretrain_v2/model_global_step=26998.0_mIoU=68.34.ckpt'
+DEBUG: 0
+PROTOCOL: 'source_target'   # source | source_target | source_free
