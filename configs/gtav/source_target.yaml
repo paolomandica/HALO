@@ -1,10 +1,10 @@
 MODEL:
-  NAME: "deeplabv3plus_resnet101"   #  deeplabv2_resnet101 or deeplabv3plus_resnet101
+  NAME: "segformer_b4"   #  deeplabv2_resnet101 or deeplabv3plus_resnet101
   WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
   FREEZE_BN: True
-  HYPER: True
+  HYPER: False
   REDUCED_CHANNELS: 64
-  HFR: True
+  HFR: False
 DATASETS:
   SOURCE_TRAIN: "gtav_train"
   TARGET_TRAIN: "cityscapes_train"
@@ -14,11 +14,14 @@ INPUT:
   TARGET_INPUT_SIZE_TRAIN: (1280, 640)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
-  GPUS: [4, 5, 6, 7]
-  BASE_LR: 1e-3
+  GPUS: [0,1,2,3,4,5,6,7]
+  BASE_LR: 6e-5
+  OPTIM: "adam"
+  SCHEDULER: "poly"
+  WEIGHT_DECAY: 1e-2
   NUM_ITER: 60000
-  BATCH_SIZE: 2
-  WARMUP_ITERS: 600
+  BATCH_SIZE: 1
+  WARMUP_ITERS: 1000
 ACTIVE:
   NAME: 'HALO'
   SETTING: 'RA'
@@ -26,18 +29,16 @@ ACTIVE:
   RATIO: 0.05
   RADIUS_K: 1
   UNCERTAINTY: 'entropy'   # 'entropy' or 'none'
-  PURITY: 'radius'          # 'ripu' or 'hyper' or 'none'
+  PURITY: 'ripu'          # 'ripu' or 'hyper' or 'none'
   VIZ_MASK: False
   NORMALIZE: True
-  MASK_RADIUS_K: 5
-  K: 100
 WANDB:
   ENABLE: True
   PROJECT: 'active_domain_adapt'
   GROUP: 'source_target'
   ENTITY: 'pinlab-sapienza'
-NAME: 'halo_radius_pixel_entropy_5perc'
+NAME: 'ripu_segformer_b4'
 OUTPUT_DIR: 'results/source_target/'
-resume: 'results/pretrain_gtav/hyper_v3plus_ch_64_WN/model_global_step=25998.0_mIoU=38.99.ckpt'
-DEBUG: 0
+resume: 'results/pretrain_gtav/segformer_b4_euc/model_global_step=20998.0_mIoU=50.54.ckpt'
+DEBUG: False
 PROTOCOL: 'source_target'   # source | source_target | source_free

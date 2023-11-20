@@ -79,6 +79,9 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
     uncertainty_type = cfg.ACTIVE.UNCERTAINTY
     purity_type = cfg.ACTIVE.PURITY
     K = cfg.ACTIVE.K
+    is_segformer = cfg.MODEL.NAME.startswith("segformer")
+    if is_segformer:
+        segformer_config = feature_extractor.config
 
     floating_region_score = FloatingRegionScore(
         in_channels=cfg.MODEL.NUM_CLASSES,
@@ -107,7 +110,14 @@ def RegionSelection(cfg, feature_extractor, classifier, tgt_epoch_loader, round_
                 classifier.to(tgt_input.device)
 
             tgt_size = tgt_input.shape[-2:]
-            tgt_feat = feature_extractor(tgt_input)
+            if is_segformer:
+                return_dict = segformer_config.return_dict
+                outputs = feature_extractor(
+                    tgt_input, output_hidden_states=True, return_dict=return_dict
+                )
+                tgt_feat = outputs.hidden_states if return_dict else outputs[1]
+            else:
+                tgt_feat = feature_extractor(tgt_input)
             tgt_out, decoder_out = classifier(tgt_feat, size=tgt_size)
 
             # just a single iteration, because len(origin_mask)=1

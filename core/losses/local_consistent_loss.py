@@ -1,5 +1,5 @@
 import torch.nn as nn
-from core.loss.boundary import DetectSPBoundary, LocalDiscrepancy
+from core.losses.boundary import DetectSPBoundary, LocalDiscrepancy
 
 
 class LocalConsistentLoss(nn.Module):

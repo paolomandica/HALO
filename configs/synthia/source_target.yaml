@@ -1,11 +1,11 @@
 MODEL:
-  NAME: "deeplabv3plus_resnet101"   #  deeplabv2_resnet101 or deeplabv3plus_resnet101
+  NAME: "segformer_b4"   #  deeplabv2_resnet101 or deeplabv3plus_resnet101
   WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
   FREEZE_BN: True
   NUM_CLASSES: 16
   HYPER: True
   REDUCED_CHANNELS: 64
-  HFR: True
+  HFR: False
 DATASETS:
   SOURCE_TRAIN: "synthia_train"
   TARGET_TRAIN: "cityscapes_train"
@@ -15,11 +15,14 @@ INPUT:
   TARGET_INPUT_SIZE_TRAIN: (1280, 640)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
-  GPUS: [0,1,2,3]
-  BASE_LR: 1e-3
+  GPUS: [0,1,2,3,4,5,6,7]
+  BASE_LR: 6e-5
+  OPTIM: "adam"
+  SCHEDULER: "poly"
+  WEIGHT_DECAY: 1e-2
   NUM_ITER: 60000
-  BATCH_SIZE: 2
-  CONSISTENT_LOSS: 0.
+  BATCH_SIZE: 1
+  WARMUP_ITERS: 1000
 ACTIVE:
   NAME: 'HALO'
   SETTING: 'RA'
@@ -29,14 +32,14 @@ ACTIVE:
   UNCERTAINTY: 'entropy'
   PURITY: 'radius'
   VIZ_MASK: False
-  NORMALIZE: True
+  NORMALIZE: False
 WANDB:
   ENABLE: True
   PROJECT: 'active_domain_adapt'
   GROUP: 'source_target_synthia'
   ENTITY: 'pinlab-sapienza'
-NAME: 'halo_radius_entropy_5perc'
-resume: 'results/pretrain_synthia/hyper_v3plus_ch_64/model_global_step=26998.0_mIoU=36.11.ckpt'
+NAME: 'halo_segformer_b4'
+resume: 'results/pretrain_synthia/segformer_b4_hyper/model_global_step=13998.0_mIoU=43.90.ckpt'
 OUTPUT_DIR: 'results/source_target_synthia/'
-DEBUG: 0
 PROTOCOL: 'source_target'
+DEBUG: False

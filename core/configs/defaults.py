@@ -43,12 +43,13 @@ _C.SOLVER.GPUS = [0, 1, 2, 3]
 _C.SOLVER.NUM_ITER = 60000
 
 # optimizer and learning rate
-_C.SOLVER.LR_METHOD = "poly"
+_C.SOLVER.OPTIM = "sgd"
+_C.SOLVER.SCHEDULER = "poly"
 _C.SOLVER.BASE_LR = 1e-3
 _C.SOLVER.LR_POWER = 0.5
 _C.SOLVER.MOMENTUM = 0.9
 _C.SOLVER.WEIGHT_DECAY = 0.0005
-_C.SOLVER.WARMUP_ITERS = 600
+_C.SOLVER.WARMUP_ITERS = 800
 
 # 4 images per batch, two for source and two for target
 _C.SOLVER.BATCH_SIZE = 2
@@ -97,5 +98,5 @@ _C.NAME = "debug"
 _C.OUTPUT_DIR = ""
 _C.resume = ""
 _C.SEED = -1
-_C.DEBUG = 0
+_C.DEBUG = False
 _C.PROTOCOL = "source_target"

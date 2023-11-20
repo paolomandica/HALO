@@ -40,7 +40,9 @@ def intersectionAndUnionGPU(output, target, K, ignore_index=255):
     target = target.view(-1)
     output[target == ignore_index] = ignore_index
     intersection = output[output == target]
-    area_intersection = torch.histc(intersection.float().cpu(), bins=K, min=0, max=K - 1)
+    area_intersection = torch.histc(
+        intersection.float().cpu(), bins=K, min=0, max=K - 1
+    )
     area_output = torch.histc(output.float().cpu(), bins=K, min=0, max=K - 1)
     area_target = torch.histc(target.float().cpu(), bins=K, min=0, max=K - 1)
     area_union = area_output + area_target - area_intersection
@@ -135,8 +137,17 @@ def _getvocpallete(num_cls):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Active Domain Adaptive Semantic Segmentation Training")
-    parser.add_argument("-cfg", "--config-file", default="", metavar="FILE", help="path to config file", type=str)
+    parser = argparse.ArgumentParser(
+        description="Active Domain Adaptive Semantic Segmentation Training"
+    )
+    parser.add_argument(
+        "-cfg",
+        "--config-file",
+        default="",
+        metavar="FILE",
+        help="path to config file",
+        type=str,
+    )
     parser.add_argument(
         "--proctitle",
         type=str,
@@ -144,7 +155,10 @@ def parse_args():
         help="allow a process to change its title",
     )
     parser.add_argument(
-        "opts", help="Modify config options using the command-line", default=None, nargs=argparse.REMAINDER
+        "opts",
+        help="Modify config options using the command-line",
+        default=None,
+        nargs=argparse.REMAINDER,
     )
 
     args = parser.parse_args()
@@ -161,14 +175,26 @@ def parse_args():
 
     return args
 
+# if "classifier.classifier.P_MLR" in model_weights:
+#     model_weights["classifier.P_MLR"] = model_weights.pop(
+#         "classifier.classifier.P_MLR"
+#     )
+# if "classifier.classifier.A_MLR" in model_weights:
+#     model_weights["classifier.A_MLR"] = model_weights.pop(
+#         "classifier.classifier.A_MLR"
+#     )
 
 def load_checkpoint(model, path, module="feature_extractor"):
     print("Loading checkpoint from {}".format(path))
     if str(path).endswith(".ckpt"):
         checkpoint = torch.load(path, map_location=torch.device("cpu"))["state_dict"]
-        model_weights = {k: v for k, v in checkpoint.items() if k.startswith(module)}
-        model_weights = OrderedDict([[k.split(module + ".")[-1], v.cpu()] for k, v in model_weights.items()])
-        model.load_state_dict(model_weights)
+        # Create a mapping to match keys in the checkpoint to keys in the model
+        key_mapping = {}
+        for k, v in checkpoint.items():
+            if k.startswith(module):
+                new_key = k[len(module) + 1:]  # Remove "classifier." prefix
+                key_mapping[new_key] = v
+        model.load_state_dict(key_mapping)
     elif str(path).endswith(".pth"):
         checkpoint = torch.load(cfg.resume, map_location=torch.device("cpu"))
         model_weights = checkpoint[module]

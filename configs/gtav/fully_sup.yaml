@@ -1,12 +1,12 @@
 MODEL:
-  NAME: "deeplabv3plus_resnet101"
+  NAME: "segformer_b4"
   WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
   FREEZE_BN: True
   HYPER: True
   REDUCED_CHANNELS: 64
-  HFR: True
+  HFR: False
 DATASETS:
-  SOURCE_TRAIN: "cityscapes_train"
+  SOURCE_TRAIN: "gtav_train"
   TARGET_TRAIN: "cityscapes_train"
   TEST: "cityscapes_val"
 INPUT:
@@ -14,20 +14,24 @@ INPUT:
   TARGET_INPUT_SIZE_TRAIN: (1280, 640)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
-  GPUS: [0,1,2,3]
-  BASE_LR: 1e-3
+  GPUS: [0,1,2,3,4,5,6,7]
+  BASE_LR: 6e-5
+  OPTIM: "adam"
+  SCHEDULER: "poly"
+  WEIGHT_DECAY: 1e-2
   NUM_ITER: 60000
-  BATCH_SIZE: 2
+  BATCH_SIZE: 1
+  WARMUP_ITERS: 1000
 ACTIVE:
   NAME: 'HALO'
   BUDGET: 1.
 WANDB:
   ENABLE: True
   PROJECT: 'active_domain_adapt'
-  NAME: 'hyper_v3plus_64_WN_fully_sup'
-  GROUP: 'source_target'
+  GROUP: 'fully_sup'
   ENTITY: 'pinlab-sapienza'
-resume: 'results/pretrain_gtav/CHECKPOINT_PATH.ckpt'
-OUTPUT_DIR: 'results/source_target/OUTPUT_PATH'
-DEBUG: 0
+NAME: 'segformer_b4_hyper'
+resume: 'results/pretrain_gtav/segformer_b4_hyper_2/model_global_step=20998.0_mIoU=52.67.ckpt'
+OUTPUT_DIR: 'results/fully_sup/'
+DEBUG: False
 PROTOCOL: 'fully_sup'
