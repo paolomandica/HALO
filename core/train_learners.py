@@ -871,7 +871,8 @@ class Test(BaseLearner):
         latex_iou_class = delimiter.join(
             map(lambda x: "{:.1f}".format(x * 100), iou_class)
         )
-        print(latex_iou_class + " & " + "{:.1f}".format(mIoU))
+        # join mIoU
+        latex_iou_class = latex_iou_class + " & " + "{:.1f}".format(mIoU)
 
         # print metrics table style
         # print()
@@ -895,6 +896,9 @@ class Test(BaseLearner):
                 sync_dist=False,
                 prog_bar=True,
             )
+            latex_iou_class = latex_iou_class + " & " + "{:.1f}".format(mIoU_star)
+            
+        print(latex_iou_class)
         print()
 
         # log metrics

@@ -1,10 +1,10 @@
 MODEL:
-  NAME: "deeplabv2_resnet101"
+  NAME: "segformer_b4"
   WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
   FREEZE_BN: True
   HYPER: True
   REDUCED_CHANNELS: 64      # 256 or 10
-  HFR: True
+  HFR: False
 DATASETS:
   TEST: "cityscapes_val"
 INPUT:
@@ -18,7 +18,6 @@ TEST:
   VIZ_WRONG: False
   SAVE_EMBED: False
   BATCH_SIZE: 1
-NAME: 'halo_v2_radius_entropy_2perc'
-resume: 'results/source_target/halo_v2_radius_entropy_2perc/model_global_step=27998.0_mIoU=70.83.ckpt'
-OUTPUT_DIR: 'results/source_target/'
-DEBUG: 0
+NAME: 'segformer_b4_hyper'
+resume: 'results/fully_sup/segformer_b4_hyper/model_global_step=14998.0_mIoU=76.72.ckpt'
+OUTPUT_DIR: 'results/fully_sup/'

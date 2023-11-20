@@ -1,19 +1,17 @@
 MODEL:
-  NAME: "deeplabv2_resnet101"
+  NAME: "segformer_b4"
   WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
   FREEZE_BN: True
-  NUM_CLASSES: 16
   HYPER: True
   REDUCED_CHANNELS: 64      # 256 or 10
-  HFR: True
+  HFR: False
+  NUM_CLASSES: 16
 DATASETS:
   TEST: "cityscapes_val"
 INPUT:
   SOURCE_INPUT_SIZE_TRAIN: (1280, 720)
   TARGET_INPUT_SIZE_TRAIN: (1280, 640)
   INPUT_SIZE_TEST: (1280, 640)
-ACTIVE:
-  NAME: 'HALO'
 SOLVER:
   GPUS: [0]
 TEST:
@@ -21,6 +19,6 @@ TEST:
   VIZ_WRONG: False
   SAVE_EMBED: False
   BATCH_SIZE: 1
-resume: 'results/source_target_synthia/CHECKPOINT_PATH.ckpt'
-OUTPUT_DIR: 'results/source_target_synthia/OUTPUT_PATH'
-DEBUG: 0
+NAME: 'halo_segformer_b4_fully_sup'
+resume: 'results/source_target_synthia/halo_segformer_b4_fully_sup/model_global_step=14998.0_mIoU=77.74.ckpt'
+OUTPUT_DIR: 'results/source_target_synthia/'
