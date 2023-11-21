@@ -12,13 +12,13 @@ INPUT:
   TARGET_INPUT_SIZE_TRAIN: (1280, 640)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
-  GPUS: [0]
+  GPUS: [7]
 TEST:
   VIZ_SCORE: False
   VIZ_WRONG: False
-  SAVE_EMBED: True
+  SAVE_EMBED: False
   BATCH_SIZE: 1
-NAME: 'halo_cs_to_acdc_5perc'
-resume: 'results/source_target_acdc/halo_cs_to_acdc_5perc/model_global_step=24998.0_mIoU=66.37.ckpt'
+NAME: 'halo_cs_to_acdc_5perc_segformer_b4'
+resume: 'results/source_target_acdc/halo_cs_to_acdc_5perc_segformer_b4/model_global_step=14998.0_mIoU=71.92.ckpt'
 OUTPUT_DIR: 'results/source_target_acdc/'
-DEBUG: 0
+DEBUG: False

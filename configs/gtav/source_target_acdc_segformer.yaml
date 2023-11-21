@@ -39,6 +39,6 @@ WANDB:
   ENTITY: 'pinlab-sapienza'
 NAME: 'halo_cs_to_acdc_5perc_segformer_b4'
 OUTPUT_DIR: 'results/source_target_acdc/'
-resume: ''
-DEBUG: 0
+resume: 'results/pretrain_gtav/segformer_cityscapes_pretrain/model_global_step=17998.0_mIoU=77.20.ckpt'
+DEBUG: False
 PROTOCOL: 'source_target'   # source | source_target | source_free
