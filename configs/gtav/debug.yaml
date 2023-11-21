@@ -1,43 +1,30 @@
 MODEL:
-  NAME: "deeplabv3plus_resnet101"   #  deeplabv2_resnet101 or deeplabv3plus_resnet101
-  WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
+  NAME: "deeplabv3plus_resnet101"   # deeplabv3plus_resnet101
+  WEIGHTS: 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth'
   FREEZE_BN: True
   HYPER: True
-  REDUCED_CHANNELS: 64
   HFR: True
+  REDUCED_CHANNELS: 64
 DATASETS:
   SOURCE_TRAIN: "gtav_train"
-  TARGET_TRAIN: "cityscapes_train"
   TEST: "cityscapes_val"
 INPUT:
   SOURCE_INPUT_SIZE_TRAIN: (1280, 720)
-  TARGET_INPUT_SIZE_TRAIN: (1280, 640)
   INPUT_SIZE_TEST: (1280, 640)
 SOLVER:
   GPUS: [0]
-  BASE_LR: 1e-3
-  NUM_ITER: 60000
   BATCH_SIZE: 2
-  WARMUP_ITERS: 600
-ACTIVE:
-  NAME: 'HALO'
-  SETTING: 'RA'
-  SELECT_ITER: [0, 15000, 30000, 40000, 50000]
-  RATIO: 0.05
-  RADIUS_K: 1
-  UNCERTAINTY: 'entropy'   # 'entropy' or 'none'
-  PURITY: 'radius'          # 'ripu' or 'hyper' or 'none'
-  VIZ_MASK: False
-  NORMALIZE: True
-  MASK_RADIUS_K: 5
-  K: 100
+  BASE_LR: 6e-5
+  OPTIM: "adam"
+  SCHEDULER: "poly"
+  WEIGHT_DECAY: 1e-2
+  NUM_ITER: 60000
+  WARMUP_ITERS: 1000
 WANDB:
   ENABLE: False
+  GROUP: 'gtav_pretraining'
   PROJECT: 'active_domain_adapt'
-  GROUP: 'source_target'
   ENTITY: 'pinlab-sapienza'
 NAME: 'debug'
-OUTPUT_DIR: 'results/source_target/'
-# resume: 'results/pretrain_gtav/hyper_v3plus_ch_64_WN/model_global_step=25998.0_mIoU=38.99.ckpt'
-DEBUG: 0
-PROTOCOL: 'source_target'   # source | source_target | source_free
+OUTPUT_DIR: 'results/pretrain_gtav/'
+PROTOCOL: 'source'
