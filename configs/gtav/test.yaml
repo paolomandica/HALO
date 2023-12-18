@@ -1,5 +1,5 @@
 MODEL:
-  NAME: "segformer_b4"
+  NAME: "deeplabv2_resnet101"
   WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
   FREEZE_BN: True
   HYPER: True
@@ -16,9 +16,9 @@ SOLVER:
 TEST:
   VIZ_SCORE: False
   VIZ_WRONG: False
-  SAVE_EMBED: False
+  SAVE_EMBED: True
   BATCH_SIZE: 1
-NAME: 'halo_cs_to_acdc_5perc_segformer_b4'
-resume: 'results/source_target_acdc/halo_cs_to_acdc_5perc_segformer_b4/model_global_step=14998.0_mIoU=71.92.ckpt'
+NAME: 'halo_cs_to_acdc_v2_2perc'
+resume: 'results/source_target_acdc/halo_cs_to_acdc_v2_2perc/model_global_step=18998.0_mIoU=63.24.ckpt'
 OUTPUT_DIR: 'results/source_target_acdc/'
 DEBUG: False
