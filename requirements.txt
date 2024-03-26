@@ -1,10 +1,11 @@
 torch
 torchvision
 pytorch-lightning
+lightning
 yacs
 numpy
 tqdm
-opencv_contrib_python
+opencv-contrib-python-headless
 imageio==2.9.0
 Pillow
 matplotlib

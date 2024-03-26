@@ -6,12 +6,14 @@
 We propose ...
 
 ## Usage
+
 ### Prerequisites
+
 - Python 3.9
 - Pytorch 1.13
 - torchvision 0.14
 
-Step-by-step installation
+### Step-by-step installation with conda
 
 ```bash
 conda create --name halo -y python=3.9
@@ -22,10 +24,17 @@ conda install -y ipython pip
 
 # this installs required packages
 pip install -r requirements.txt
+```
 
-# install mmcv
-pip install -U openmim
-mim install mmcv
+### Step-by-step installation with Docker
+
+```bash
+export UID=$(id -u)
+export GID=$(id -g)
+export DATA_VOLUME="/mnt/homes/paolo/"
+
+docker compose build
+docker compose up -d
 ```
 
 ### Data Preparation
@@ -71,6 +80,7 @@ The config files for the different ADA training protocols can be found in the `c
 #### Training
 
 ```bash
+export NCCL_IB_TIMEOUT=22
 python train.py -cfg CONFIG_PATH
 ```
 

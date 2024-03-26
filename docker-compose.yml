@@ -1,0 +1,23 @@
+services:
+  container:
+    build:
+      context: .
+      args:
+        UID: ${UID}
+        GID: ${GID}
+    image: paolomandica/halo:latest
+    container_name: halo
+    volumes:
+      - ${DATA_VOLUME}:/data
+      - .:/home/nonroot/HALO
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+    shm_size: '256G'
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 8
+              capabilities: [gpu]
