@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.3.2-cudnn9-devel-ubuntu22.04
+FROM nvidia/cuda:12.3.2-cudnn9-runtime-ubuntu22.04
 
 # Set timezone
 ENV TZ=Europe/Rome
@@ -32,7 +32,7 @@ RUN ln -s /usr/bin/python3 /usr/bin/python
 
 # copy and install pip requirements
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
 
 # Create a non-root user
 ARG UID
