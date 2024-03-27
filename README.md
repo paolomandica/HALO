@@ -28,6 +28,8 @@ pip install -r requirements.txt
 
 ### Step-by-step installation with Docker
 
+Modify the `docker-compose.yml` file to set the correct number of available GPUs. Then set your correct path for the `DATA_VOLUME` and run the following commands:
+
 ```bash
 export UID=$(id -u)
 export GID=$(id -g)
