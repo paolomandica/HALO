@@ -1,21 +1,25 @@
-from pathlib import Path
-import random
-import setproctitle
-import warnings
-import torch
+import datetime
 import os
+import random
 import shutil
-from core.utils.misc import mkdir, parse_args
+import warnings
+from pathlib import Path
+
+import pytorch_lightning as pl
+import setproctitle
+import torch
+from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers.wandb import WandbLogger
+from pytorch_lightning.strategies import DDPStrategy
+
 from core.configs import cfg
 from core.train_learners import (
+    FullySupervisedLearner,
     SourceFreeLearner,
     SourceLearner,
     SourceTargetLearner,
-    FullySupervisedLearner,
 )
-from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.loggers.wandb import WandbLogger
-import pytorch_lightning as pl
+from core.utils.misc import mkdir, parse_args
 
 warnings.filterwarnings("ignore")
 
@@ -111,6 +115,8 @@ def main():
     )
 
     callbacks = [checkcall_1]
+    # strategy = DDPStrategy(timeout=datetime.timedelta(seconds=3600))
+    strategy = "ddp"
 
     # init trainer
     trainer = pl.Trainer(
@@ -121,7 +127,7 @@ def main():
         log_every_n_steps=50,
         accumulate_grad_batches=1,
         sync_batchnorm=True,
-        strategy="ddp",
+        strategy=strategy,
         num_nodes=1,
         logger=wandb_logger,
         callbacks=callbacks,

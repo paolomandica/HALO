@@ -1,22 +1,22 @@
 import os
-import pytorch_lightning as pl
+
 import numpy as np
+import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import LinearLR, SequentialLR, PolynomialLR, ConstantLR
 from geoopt.optim import RiemannianSGD
+from torch.optim.lr_scheduler import LinearLR, PolynomialLR, SequentialLR
+from torch.utils.data import DataLoader
 
-from core.datasets import build_dataset
+from core.active.build import RegionSelection
 from core.configs import cfg
+from core.datasets import build_dataset
 from core.datasets.dataset_path_catalog import DatasetCatalog
 from core.loss.local_consistent_loss import LocalConsistentLoss
-from core.models import build_feature_extractor, build_classifier
-from core.utils.misc import load_checkpoint
 from core.loss.negative_learning_loss import NegativeLearningLoss
-from core.active.build import RegionSelection
-
+from core.models import build_classifier, build_feature_extractor
+from core.utils.misc import load_checkpoint
 from core.utils.visualize import visualize_wrong
 
 NUM_WORKERS = 4

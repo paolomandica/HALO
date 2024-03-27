@@ -92,4 +92,4 @@ python test.py -cfg CONFIG_PATH
 
 
 ## Acknowledgements
-This project is based on the [RIPU](https://github.com/BIT-DA/RIPU) open-source project, with our re-implementation in PyTorch Lightning for multi-GPU ADA. We thank the authors for making the source code publically available.
+This project is based on the [RIPU](https://github.com/BIT-DA/RIPU) open-source project, with our re-implementation in PyTorch Lightning for multi-gpu active learning. We thank the authors for making the source code publically available.
