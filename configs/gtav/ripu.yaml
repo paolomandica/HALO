@@ -1,7 +1,5 @@
 MODEL:
   NAME: "deeplabv3plus_resnet101"   #  deeplabv2_resnet101 or deeplabv3plus_resnet101
-  WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
-  FREEZE_BN: True
   HYPER: False
   REDUCED_CHANNELS: 512
   HFR: False
@@ -20,11 +18,8 @@ SOLVER:
   BATCH_SIZE: 2
   CONSISTENT_LOSS: 0.1
 ACTIVE:
-  NAME: 'HALO'
-  SETTING: 'RA'
   SELECT_ITER: [0, 15000, 30000, 40000, 50000]
   BUDGET: 0.05
-  RADIUS_K: 1
   UNCERTAINTY: 'entropy'
   PURITY: 'ripu'
   VIZ_MASK: False
@@ -33,9 +28,9 @@ ACTIVE:
 WANDB:
   ENABLE: True
   PROJECT: 'active_domain_adapt'
-  NAME: 'ripu_dlv3_5_perc_ch_64_2'
   GROUP: 'source_target'
   ENTITY: 'pinlab-sapienza'
+NAME: 'ripu_v3plus_5perc'
 resume: 'results/pretrain_gtav/CHECKPOINT_PATH.ckpt'
 OUTPUT_DIR: 'results/source_target/OUTPUT_PATH'
 DEBUG: 0

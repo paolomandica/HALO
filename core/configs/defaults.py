@@ -7,7 +7,7 @@ _C = CN()
 _C.MODEL = CN()
 _C.MODEL.NAME = "deeplabv3plus_resnet101"
 _C.MODEL.NUM_CLASSES = 19
-_C.MODEL.WEIGHTS = ""
+_C.MODEL.WEIGHTS = "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
 _C.MODEL.FREEZE_BN = True
 _C.MODEL.HYPER = True
 _C.MODEL.CURVATURE = 1.0
@@ -65,10 +65,8 @@ _C.SOLVER.LCR_TYPE = "l1"
 
 _C.ACTIVE = CN()
 # active strategy
-_C.ACTIVE.NAME = "HALO"
 _C.ACTIVE.UNCERTAINTY = "entropy"
 _C.ACTIVE.PURITY = "hyper"
-_C.ACTIVE.SETTING = "RA"
 _C.ACTIVE.SELECT_ITER = [0, 15000, 30000, 40000, 50000]
 # total selection ratio per image
 _C.ACTIVE.BUDGET = 0.05

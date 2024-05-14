@@ -1,7 +1,5 @@
 MODEL:
   NAME: "deeplabv3plus_resnet101"   #  deeplabv2_resnet101 or deeplabv3plus_resnet101
-  WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
-  FREEZE_BN: True
   NUM_CLASSES: 16
   HYPER: True
   REDUCED_CHANNELS: 64
@@ -20,23 +18,18 @@ SOLVER:
   NUM_ITER: 60000
   BATCH_SIZE: 2
 ACTIVE:
-  NAME: 'HALO'
-  SETTING: 'RA'
   SELECT_ITER: [0, 15000, 30000, 40000, 50000]
   BUDGET: 0.05
-  RADIUS_K: 1
   UNCERTAINTY: 'entropy'
-  PURITY: 'hyper'
+  PURITY: 'radius'
   VIZ_MASK: False
   NORMALIZE: True
-  MASK_RADIUS_K: 5
-  K: 100
 WANDB:
   ENABLE: True
   PROJECT: 'active_domain_adapt'
-  NAME: 'hyper_dlv3_64_WN_5_perc_entr_hyperimp_K200_RK5'
-  GROUP: 'source_free'
+  GROUP: 'source_free_synthia'
   ENTITY: 'pinlab-sapienza'
+NAME: 'halo_radius_entropy_5perc'
 resume: 'results/pretrain_synthia/CHECKPOINT_PATH.ckpt'
 OUTPUT_DIR: 'results/source_free_synthia/OUTPUT_PATH'
 DEBUG: 0

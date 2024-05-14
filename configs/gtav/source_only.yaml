@@ -1,7 +1,5 @@
 MODEL:
   NAME: "deeplabv3plus_resnet101"
-  WEIGHTS: 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth'
-  FREEZE_BN: True
   HYPER: True
   REDUCED_CHANNELS: 64
   HFR: True
@@ -19,9 +17,9 @@ SOLVER:
   WARMUP_ITERS: 600
 WANDB:
   ENABLE: True
-  NAME: 'cityscapes_pretrain'
   GROUP: 'gtav_pretraining'
   PROJECT: 'active_domain_adapt'
   ENTITY: 'pinlab-sapienza'
-OUTPUT_DIR: 'results/pretrain_gtav/cityscapes_pretrain'
+NAME: 'hyper_v3plus'
+OUTPUT_DIR: 'results/pretrain_gtav/'
 PROTOCOL: 'source'

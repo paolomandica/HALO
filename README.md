@@ -1,8 +1,6 @@
- ---  
- 
 # Hyperbolic Active Learning
 
-This is the Official PyTorch implementation of the **ICML 2024** paper [**Hyperbolic Active Learning for Semantic Segmentation under Domain Shift**](https://arxiv.org/abs/2306.11180).
+This is the official PyTorch implementation of the **ICML 2024** paper [**Hyperbolic Active Learning for Semantic Segmentation under Domain Shift**](https://arxiv.org/abs/2306.11180).
 
 *Luca Franco <sup>&dagger; 1</sup>, Paolo Mandica <sup>&dagger; 2</sup>, Konstantinos Kallidromitis <sup>3</sup>, Devin Guillory<sup>4</sup>, Yu-Teng Li<sup>4</sup>, Trevor Darrell<sup>4</sup>, Fabio Galasso<sup>1,2</sup>*  
 *<sup>1</sup> ItalAI,<sup>2</sup> Sapienza University of Rome, <sup>3</sup> Panasonic North America, <sup>4</sup> UC Berkeley*  
@@ -95,6 +93,20 @@ python train.py -cfg CONFIG_PATH
 ```bash
 python test.py -cfg CONFIG_PATH
 ```
+
+### Training with ACDC Dataset or SegFormer architecture
+
+To train with the ACDC dataset or the SegFormer architecture, you need to switch to the corresponding branch:
+
+```bash
+git checkout acdc
+```
+or
+```bash
+git checkout segformer
+```
+
+The two branches will be merged into the main branch soon.
 
 ## Acknowledgements
 

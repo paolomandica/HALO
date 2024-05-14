@@ -1,7 +1,5 @@
 MODEL:
   NAME: "deeplabv3plus_resnet101"
-  WEIGHTS: 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth'
-  FREEZE_BN: True
   NUM_CLASSES: 16
   HYPER: True
   REDUCED_CHANNELS: 64
@@ -17,11 +15,12 @@ SOLVER:
   BATCH_SIZE: 2
   BASE_LR: 1e-3
   NUM_ITER: 60000
+  WARMUP_ITERS: 600
 WANDB:
   ENABLE: True
-  NAME: 'synthia_hyper_v3plus_ch_64_temp'
   GROUP: 'synthia_pretraining'
   PROJECT: 'active_domain_adapt'
-  ENTITY: 'syn2real'
+  ENTITY: 'pinlab-sapienza'
+NAME: 'hyper_v3plus'
 OUTPUT_DIR: 'results/pretrain_synthia/OUTPUT_PATH'
 PROTOCOL: 'source'

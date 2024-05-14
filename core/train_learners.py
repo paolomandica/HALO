@@ -315,12 +315,11 @@ class SourceFreeLearner(BaseLearner):
             print(f"\n>>>>>>>>>>>>>>>> Active Round {self.active_round} >>>>>>>>>>>>>>>>")
             print(f"batch_idx: {batch_idx}, self.local_rank: {self.local_rank}")
 
-            if self.cfg.ACTIVE.SETTING == "RA":
-                RegionSelection(cfg=self.cfg,
-                                feature_extractor=self.feature_extractor,
-                                classifier=self.classifier,
-                                tgt_epoch_loader=self.active_loader,
-                                round_number=self.active_round)
+            RegionSelection(cfg=self.cfg,
+                            feature_extractor=self.feature_extractor,
+                            classifier=self.classifier,
+                            tgt_epoch_loader=self.active_loader,
+                            round_number=self.active_round)
 
             self.log('active_round', self.active_round, on_step=True, on_epoch=False)
             self.active_round += 1

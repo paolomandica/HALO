@@ -1,7 +1,5 @@
 MODEL:
   NAME: "deeplabv3plus_resnet101"   #  deeplabv2_resnet101 or deeplabv3plus_resnet101
-  WEIGHTS: "https://download.pytorch.org/models/resnet101-5d3b4d8f.pth"
-  FREEZE_BN: True
   HYPER: True
   REDUCED_CHANNELS: 64
   HFR: True
@@ -19,24 +17,19 @@ SOLVER:
   NUM_ITER: 60000
   BATCH_SIZE: 2
 ACTIVE:
-  NAME: 'HALO'
-  SETTING: 'RA'
   SELECT_ITER: [0, 15000, 30000, 40000, 50000]
   BUDGET: 0.05
-  RADIUS_K: 1
   UNCERTAINTY: 'entropy'
   PURITY: 'radius'
   VIZ_MASK: False
   NORMALIZE: True
-  MASK_RADIUS_K: 5
-  K: 100
 WANDB:
   ENABLE: True
   PROJECT: 'active_domain_adapt'
   GROUP: 'source_free'
   ENTITY: 'pinlab-sapienza'
 NAME: 'halo_radius_entropy_5perc'
-resume: 'results/pretrain_gtav/hyper_v3plus_ch_64_WN/model_global_step=25998.0_mIoU=38.99.ckpt'
+resume: 'results/pretrain_gtav/CKPT_PATH.ckpt'
 OUTPUT_DIR: 'results/source_free/'
 DEBUG: 0
 PROTOCOL: 'source_free'
