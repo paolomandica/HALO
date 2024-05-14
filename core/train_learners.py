@@ -273,7 +273,7 @@ class SourceFreeLearner(BaseLearner):
     def __init__(self, cfg):
         super().__init__(cfg)
 
-        self.debug = bool(cfg.DEBUG)
+        self.debug = cfg.DEBUG
         if self.debug:
             print(">>>>>>>>>>>>>>>> Debug Mode >>>>>>>>>>>>>>>>")
 

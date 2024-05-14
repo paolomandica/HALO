@@ -17,4 +17,4 @@ TEST:
 NAME: 'halo_v3plus_radius_entropy_5perc'
 resume: 'results/source_target/CKPT_PATH.pth'
 OUTPUT_DIR: 'results/source_target/'
-DEBUG: 0
+DEBUG: False

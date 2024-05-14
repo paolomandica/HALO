@@ -95,5 +95,5 @@ _C.NAME = "debug"
 _C.OUTPUT_DIR = ""
 _C.resume = ""
 _C.SEED = -1
-_C.DEBUG = 0
+_C.DEBUG = False
 _C.PROTOCOL = "source_target"

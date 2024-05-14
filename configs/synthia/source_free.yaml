@@ -32,5 +32,5 @@ WANDB:
 NAME: 'halo_radius_entropy_5perc'
 resume: 'results/pretrain_synthia/CHECKPOINT_PATH.ckpt'
 OUTPUT_DIR: 'results/source_free_synthia/OUTPUT_PATH'
-DEBUG: 0
+DEBUG: False
 PROTOCOL: 'source_free'

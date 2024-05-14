@@ -31,5 +31,5 @@ WANDB:
 NAME: 'halo_radius_entropy_5perc'
 resume: 'results/pretrain_gtav/CKPT_PATH.ckpt'
 OUTPUT_DIR: 'results/source_free/'
-DEBUG: 0
+DEBUG: False
 PROTOCOL: 'source_free'
