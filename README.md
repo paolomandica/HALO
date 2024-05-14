@@ -2,38 +2,39 @@
  
 # Hyperbolic Active Learning
 
-## Overview
-We propose ...
+This is the Official PyTorch implementation of the **ICML 2024** paper [**Hyperbolic Active Learning for Semantic Segmentation under Domain Shift**](https://arxiv.org/abs/2306.11180).
+
+*Luca Franco <sup>&dagger; 1</sup>, Paolo Mandica <sup>&dagger; 2</sup>, Konstantinos Kallidromitis <sup>3</sup>, Devin Guillory<sup>4</sup>, Yu-Teng Li<sup>4</sup>, Trevor Darrell<sup>4</sup>, Fabio Galasso<sup>1,2</sup>*  
+*<sup>1</sup> ItalAI,<sup>2</sup> Sapienza University of Rome, <sup>3</sup> Panasonic North America, <sup>4</sup> UC Berkeley*  
+<sup>&dagger;</sup> Equal contribution
+
+---
+
+<p align="center">
+<img src=".github/pipeline.png" width=100% height=100% 
+class="center">
+</p>
 
 ## Usage
 
-### Prerequisites
+You can choose to run the code in a conda environment or in a docker container. Follow the instructions below to set up your preferred environment.
 
-- Python 3.9
-- Pytorch 1.13
-- torchvision 0.14
-
-### Step-by-step installation with conda
+### Conda env setup
 
 ```bash
 conda create --name halo -y python=3.9
 conda activate halo
-
-# this installs the right pip and dependencies for the fresh python
-conda install -y ipython pip
-
-# this installs required packages
 pip install -r requirements.txt
 ```
 
-### Step-by-step installation with Docker
+### Docker env setup
 
 Modify the `docker-compose.yml` file to set the correct number of available GPUs. Then set your correct path for the `DATA_VOLUME` and run the following commands:
 
 ```bash
 export UID=$(id -u)
 export GID=$(id -g)
-export DATA_VOLUME="/mnt/homes/paolo/"
+export DATA_VOLUME="YOUR_PATH_TO_DATA_FOLDER"
 
 docker compose build
 docker compose up -d
@@ -41,24 +42,25 @@ docker compose up -d
 
 ### Data Preparation
 
-- Download [The Cityscapes Dataset](https://www.cityscapes-dataset.com/), [The GTAV Dataset](https://download.visinf.tu-darmstadt.de/data/from_games/), and [The SYNTHIA Dataset](https://synthia-dataset.net/)
+1. Download the [Cityscapes Dataset](https://www.cityscapes-dataset.com/), [GTAV Dataset](https://download.visinf.tu-darmstadt.de/data/from_games/), [SYNTHIA Dataset](https://synthia-dataset.net/), [ACDC Dataset](https://acdc.vision.ee.ethz.ch/) and extract them.
 
-Symlink the required dataset
+2. If you downloaded the datasets in a different folder, symlink them to the `datasets` directory:
 
-```bash
-ln -s /path_to_cityscapes_dataset datasets/cityscapes
-ln -s /path_to_gtav_dataset datasets/gtav
-ln -s /path_to_synthia_dataset datasets/synthia
-```
+    ```bash
+    ln -s /path_to_cityscapes_dataset datasets/cityscapes
+    ln -s /path_to_gtav_dataset datasets/gtav
+    ln -s /path_to_synthia_dataset datasets/synthia
+    ln -s /path_to_acdc_dataset datasets/acdc
+    ```
 
-Generate the label static files for GTAV/SYNTHIA Datasets by running
+3. Generate the label static files for GTAV/SYNTHIA Datasets by running
 
-```bash
-python datasets/generate_gtav_label_info.py -d datasets/gtav -o datasets/gtav/
-python datasets/generate_synthia_label_info.py -d datasets/synthia -o datasets/synthia/
-```
+    ```bash
+    python datasets/generate_gtav_label_info.py -d datasets/gtav -o datasets/gtav/
+    python datasets/generate_synthia_label_info.py -d datasets/synthia -o datasets/synthia/
+    ```
 
-The data folder should be structured as follows:
+The `datasets` directory tree should be structured as follows:
 
 ```
 ├── datasets/
@@ -72,26 +74,47 @@ The data folder should be structured as follows:
 │   └──	synthia
 |   |   ├── RAND_CITYSCAPES/
 |   |   ├── synthia_label_info.p
-│   └──	
+│   └──	acdc
+|   |   ├── images/
+|   |   ├── gt/
 ```
 
-### Usage
 
-The config files for the different ADA training protocols can be found in the `configs` directory.
+### Training
 
-#### Training
+The config files for the different training protocols can be found in the `configs` directory.
+
+Before running the training/testing scripts, make sure to set the correct paths in the config files.
 
 ```bash
-export NCCL_IB_TIMEOUT=22
 python train.py -cfg CONFIG_PATH
 ```
 
-#### Testing
+### Testing
 
 ```bash
 python test.py -cfg CONFIG_PATH
 ```
 
-
 ## Acknowledgements
+
 This project is based on the [RIPU](https://github.com/BIT-DA/RIPU) open-source project, with our re-implementation in PyTorch Lightning for multi-gpu active learning. We thank the authors for making the source code publically available.
+
+## Licence
+
+This project is licensed under the terms of the MIT license.
+
+## Citation
+
+If you find this repository useful, please consider giving a star :star: and citation:
+
+```latex
+@misc{franco2024hyperbolic,
+      title={Hyperbolic Active Learning for Semantic Segmentation under Domain Shift}, 
+      author={Luca Franco and Paolo Mandica and Konstantinos Kallidromitis and Devin Guillory and Yu-Teng Li and Trevor Darrell and Fabio Galasso},
+      year={2024},
+      eprint={2306.11180},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
+```
