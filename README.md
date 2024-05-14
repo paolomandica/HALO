@@ -8,6 +8,11 @@ This is the official PyTorch implementation of the **ICML 2024** paper [**Hyperb
 
 ---
 
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/hyperbolic-active-learning-for-semantic/domain-adaptation-on-gta5-to-cityscapes)](https://paperswithcode.com/sota/domain-adaptation-on-gta5-to-cityscapes?p=hyperbolic-active-learning-for-semantic)
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/hyperbolic-active-learning-for-semantic/domain-adaptation-on-synthia-to-cityscapes)](https://paperswithcode.com/sota/domain-adaptation-on-synthia-to-cityscapes?p=hyperbolic-active-learning-for-semantic)
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/hyperbolic-active-learning-for-semantic/source-free-domain-adaptation-on-gta5-to)](https://paperswithcode.com/sota/source-free-domain-adaptation-on-gta5-to?p=hyperbolic-active-learning-for-semantic)
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/hyperbolic-active-learning-for-semantic/domain-adaptation-on-cityscapes-to-acdc)](https://paperswithcode.com/sota/domain-adaptation-on-cityscapes-to-acdc?p=hyperbolic-active-learning-for-semantic)
+
 <p align="center">
 <img src=".github/pipeline.png" width=100% height=100% 
 class="center">
