@@ -1,4 +1,4 @@
-# Hyperbolic Active Learning
+# HALO
 
 This is the official PyTorch implementation of the **ICML 2024** paper [**Hyperbolic Active Learning for Semantic Segmentation under Domain Shift**](https://arxiv.org/abs/2306.11180).
 
