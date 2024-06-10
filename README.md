@@ -126,12 +126,12 @@ This project is licensed under the terms of the MIT license.
 If you find this repository useful, please consider giving a star :star: and citation:
 
 ```latex
-@misc{franco2024hyperbolic,
-      title={Hyperbolic Active Learning for Semantic Segmentation under Domain Shift}, 
-      author={Luca Franco and Paolo Mandica and Konstantinos Kallidromitis and Devin Guillory and Yu-Teng Li and Trevor Darrell and Fabio Galasso},
-      year={2024},
-      eprint={2306.11180},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV}
+@inproceedings{
+    franco2024hyperbolic,
+    title={Hyperbolic Active Learning for Semantic Segmentation under Domain Shift},
+    author={Luca Franco and Paolo Mandica and Konstantinos Kallidromitis and Devin Guillory and Yu-Teng Li and Trevor Darrell and Fabio Galasso},
+    booktitle={Forty-first International Conference on Machine Learning},
+    year={2024},
+    url={https://openreview.net/forum?id=hKdJPMQvew}
 }
 ```
