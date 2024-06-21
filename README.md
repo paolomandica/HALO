@@ -6,6 +6,8 @@ This is the official PyTorch implementation of the **ICML 2024** paper [**Hyperb
 *<sup>1</sup> ItalAI,<sup>2</sup> Sapienza University of Rome, <sup>3</sup> Panasonic North America, <sup>4</sup> UC Berkeley*  
 <sup>&dagger;</sup> Equal contribution
 
+[[`arXiv`](https://arxiv.org/abs/2306.11180)][[`BibTeX`](#Citation)][[`OpenReview`](https://openreview.net/forum?id=hKdJPMQvew)]
+
 ---
 
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/hyperbolic-active-learning-for-semantic/domain-adaptation-on-gta5-to-cityscapes)](https://paperswithcode.com/sota/domain-adaptation-on-gta5-to-cityscapes?p=hyperbolic-active-learning-for-semantic)
@@ -121,7 +123,7 @@ This project is based on the [RIPU](https://github.com/BIT-DA/RIPU) open-source 
 
 This project is licensed under the terms of the MIT license.
 
-## Citation
+## <a name="Citation"></a>Citation
 
 If you find this repository useful, please consider giving a star :star: and citation:
 
