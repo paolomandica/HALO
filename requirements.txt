@@ -16,3 +16,4 @@ einops
 setproctitle
 wandb
 mmcv-full
+transformers
